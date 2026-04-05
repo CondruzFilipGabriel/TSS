@@ -132,11 +132,35 @@
 
     git push -u origin main
 
+* **UPDATE / UTILIZARE**
+
+    git status
+
+    git add .
+
+    git commit - m "Eticheta privind noul update"
+
+    git push
 
 
-# Jurnal Rulare
+## UTILITARE
 
-* **TESTARE FUNCTIONARE INITIALA:**
+* **pytest si cosmic-ray**
+
+    python3 -m pip install --user --break-system-packages --upgrade --force-reinstall pytest cosmic-ray
+
+    python3 -m pytest --version
+
+        pytest 9.0.2
+
+    cosmic-ray --version
+
+        cosmic-ray, version 8.4.6
+
+    cream fisierele de configurare: pytest.ini si cosmic-ray.toml
+
+
+# TESTARE FUNCTIONARE INITIALA
 
     cd /home/f/Desktop/TSS
 
