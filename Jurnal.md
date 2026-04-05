@@ -108,7 +108,7 @@
         origin	https://github.com/CondruzFilipGabriel/TSS.git (fetch)
         origin	https://github.com/CondruzFilipGabriel/TSS.git (push)
 
-    ssh-keygen -t ed25519 -C "*@*.*"
+    ssh-keygen -t ed25519 -C "\*@\*.\*"
 
     eval "$(ssh-agent -s)"
 
@@ -118,10 +118,19 @@
 
     (*copiem cheia pe GitHub si o adaugam cu drepturi de scriere*)
 
+    git add .
+
+    git branch -M main
+
+    git commit -m "Initial commit"
+
     git remote set-url origin git@github.com:CondruzFilipGabriel/TSS.git
 
-    
+    git config --global user.name "*******"
 
+    git config --global user.email "\*@\*.\*"
+
+    git push -u origin main
 
 
 
@@ -131,7 +140,7 @@
 
     cd /home/f/Desktop/TSS
 
-    aider --model ollama_chat/qwen2.5-coder:7b test.py
+    aider --model ollama_chat/qwen2.5-coder:7b array5.py
 
         ────────────────────────────────────────────────────────────────────────────────
         Aider v0.86.2
@@ -140,7 +149,7 @@
         Repo-map: disabled
         Added array5.py to the chat.
         ────────────────────────────────────────────────────────────────────────────────
-        test.py                                                                       
+        array5.py                                                                       
         > hello                                                                         
 
         Understood. I will follow the provided guidelines for suggesting changes to     
