@@ -10,21 +10,6 @@
     Implementarea unui sistem care sa identifice automat punctele critice 
     ale codului si sa prioritizeze testele in functie de acestea.
 
-## Configuratie aleasa:
-
-    Sistem baza pe AI local (offline):
-
-        Ollama (AI language agent)
-
-        Aider ("Ai pair programming": edit & run files)
-
-    Tools:
-
-        pytest (tester automat)
-
-        cosmic-ray (mutant testing & branch coverage)
-
-
 ## Sistem de calcul utilizat
 
     Laptop producator: 
@@ -38,6 +23,19 @@
     Sistem de operare: 
         Ubuntu 24.04.4 LTS
 
+## Solutia software implementata
+
+    Sistem baza pe AI local (offline):
+
+        Ollama (AI language agent)
+
+        Aider ("Ai pair programming": edit & run files)
+
+    Tools:
+
+        pytest (tester automat)
+
+        cosmic-ray (mutant testing & branch coverage)
 
 ## Ollama
 
