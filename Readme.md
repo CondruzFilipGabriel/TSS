@@ -1,4 +1,27 @@
-# Jurnal instalare si configurare
+# Proiect Testarea Sistemelor Software
+
+## Tema: imbunatatirea testarii unitare cu IA
+
+    Utilizarea IA pentru imbunatatirea testelor unitare existente, asigurant o acoperire cat mai eficienta a codului sursa (de exemplu, marirea scorului de acoperire la nivel de instructiune, decizie, conditie, mutatie generat de un framework de testare unitara) 
+
+    Implementarea unui sistem care sa identifice automat punctele critice ale codului si sa prioritizeze testele in functie de acestea.
+
+## Configuratie aleasa:
+
+    Sistem baza pe AI local (offline):
+
+        Ollama (AI language agent)
+
+        Aider ("Ai pair programming": edit & run files)
+
+    Tools:
+
+        pytest (tester automat)
+
+        cosmic-ray (mutant testing & branch coverage)
+
+
+## Jurnal instalare si configurare
 
     Laptop producator: 
         LENOVO IdeaPad Pro 5 14AHP9
@@ -44,7 +67,7 @@
         CGroup: /system.slice/ollama.service
                 └─6219 /usr/local/bin/ollama serve
 
-    *// Ollama rulează ca serviciu systemd*
+        // Ollama rulează ca serviciu systemd
 
 
 * **CONFIGURARE**
@@ -191,3 +214,15 @@
 
         Tokens: 626 sent, 35 received.
         ────────────────────────────────────────────────────────────────────────────────
+
+## Functionalitati
+
+
+## Utilizare
+
+
+## Autor
+
+    Condruz Filip Gabriel
+
+    Univesitatea Bucuresti, Facultatea de Matematica si Informatica, anul 3 ID
