@@ -3,9 +3,9 @@
 ## Tema: imbunatatirea testarii unitare cu IA
 
     Utilizarea IA pentru imbunatatirea testelor unitare existente,
-    asigurant o acoperire cat mai eficienta a codului sursa (de exemplu, 
+    asigurand o acoperire cat mai eficienta a codului sursa (de exemplu, 
     marirea scorului de acoperire la nivel de instructiune, decizie, 
-    conditie, mutatie generat de un framework de testare unitara) 
+    conditie, mutatie generata de un framework de testare unitara) 
     
     Implementarea unui sistem care sa identifice automat punctele critice 
     ale codului si sa prioritizeze testele in functie de acestea.
