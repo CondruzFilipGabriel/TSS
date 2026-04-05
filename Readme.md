@@ -25,7 +25,7 @@
         cosmic-ray (mutant testing & branch coverage)
 
 
-## Jurnal instalare si configurare
+## Sistem de calcul utilizat
 
     Laptop producator: 
         LENOVO IdeaPad Pro 5 14AHP9
