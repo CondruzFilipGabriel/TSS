@@ -1,6 +1,21 @@
 # Proiect Testarea Sistemelor Software
 
+## Cuprins
+* [Tema: imbunatatirea testarii unitare cu IA](#tema-imbunatatirea-testarii-unitare-cu-ia)
+* [Sistem de calcul utilizat](#sistem-de-calcul-utilizat)
+* [Solutia software implementata](#solutia-software-implementata)
+* [Ollama](#ollama)
+* [Aider](#aider)
+* [Git](#git)
+* [Utilitare](#utilitare)
+* [Testarea functionarii initiale](#testarea-functionarii-initiale)
+* [Functionalitati](#functionalitati)
+* [Utilizare](#utilitare)
+* [Autor](#autor)
+
 ## Tema: imbunatatirea testarii unitare cu IA
+
+[<< Cuprins](#cuprins)
 
     Utilizarea IA pentru imbunatatirea testelor unitare existente,
     asigurand o acoperire cat mai eficienta a codului sursa (de exemplu, 
@@ -11,6 +26,8 @@
     ale codului si sa prioritizeze testele in functie de acestea.
 
 ## Sistem de calcul utilizat
+
+[<< Cuprins](#cuprins)
 
     Laptop producator: 
         LENOVO IdeaPad Pro 5 14AHP9
@@ -25,6 +42,8 @@
 
 ## Solutia software implementata
 
+[<< Cuprins](#cuprins)
+
     Sistem baza pe AI local (offline):
 
         Ollama (AI language agent)
@@ -38,6 +57,8 @@
         cosmic-ray (mutant testing & branch coverage)
 
 ## Ollama
+
+[<< Cuprins](#cuprins)
 
 * **INSTALARE**
 
@@ -100,7 +121,9 @@
 
 ## AIDER
 
-* **INSTALARE**
+[<< Cuprins](#cuprins)
+
+**INSTALARE**
 
     curl -LsSf https://aider.chat/install.sh | sh
 
@@ -113,6 +136,8 @@
         aider 0.86.2
 
 ## GIT
+
+[<< Cuprins](#cuprins)
 
 * **INSTALARE**
 
@@ -170,7 +195,9 @@
 
 ## UTILITARE
 
-* **pytest si cosmic-ray**
+[<< Cuprins](#cuprins)
+
+**pytest si cosmic-ray**
 
     python3 -m pip install --user --break-system-packages --upgrade --force-reinstall pytest cosmic-ray
 
@@ -185,7 +212,9 @@
     cream fisierele de configurare: pytest.ini si cosmic-ray.toml
 
 
-# TESTARE FUNCTIONARE INITIALA
+## TESTAREA FUNCTIONARII INITIALE
+
+[<< Cuprins](#cuprins)
 
     cd /home/f/Desktop/TSS
 
@@ -217,13 +246,19 @@
         Tokens: 626 sent, 35 received.
         ────────────────────────────────────────────────────────────────────────────────
 
-## Functionalitati
+## FUNCTIONALITATI
+
+[<< Cuprins](#cuprins)
 
 
-## Utilizare
+## UTILIZARE
+
+[<< Cuprins](#cuprins)
 
 
-## Autor
+## AUTOR
+
+[<< Cuprins](#cuprins)
 
     Condruz Filip Gabriel
 
