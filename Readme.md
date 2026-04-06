@@ -10,7 +10,7 @@
 * [Utilitare](#utilitare)
 * [Testarea functionarii initiale](#testarea-functionarii-initiale)
 * [Functionalitati](#functionalitati)
-* [Utilizare](#utilitare)
+* [Utilizare](#utilizare)
 * [Autor](#autor)
 
 ## Tema: imbunatatirea testarii unitare cu IA
@@ -195,19 +195,6 @@
 
 ## UTILITARE
 
-* **Run Ollama**
-
-    start: 
-    
-        ollama run qwen2.5-coder:7b
-        cd /home/f/Desktop/TSS
-        aider --model ollama_chat/qwen2.5-coder:7b
-
-    stop (intai Aider, apoi Ollama): 
-    
-        /exit 
-        ollama stop qwen2.5-coder:7b
-
 [<< Cuprins](#cuprins)
 
 **pytest si cosmic-ray**
@@ -267,6 +254,17 @@
 ## UTILIZARE
 
 [<< Cuprins](#cuprins)
+
+* **Start Aider + Ollama**
+    
+        ollama run qwen2.5-coder:7b
+        cd /home/f/Desktop/TSS
+        aider --model ollama_chat/qwen2.5-coder:7b
+
+* **Exit Aider, apoi oprire Ollama** 
+    
+        /exit 
+        ollama stop qwen2.5-coder:7b
 
 
 ## AUTOR
