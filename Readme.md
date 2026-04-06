@@ -46,7 +46,7 @@
 
     Sistem baza pe AI local (offline):
 
-        Ollama (AI language agent)
+        Ollama (AI language agent) cu Qwen2.5-Coder pe 7B
 
         Aider ("Ai pair programming": edit & run files)
 
@@ -95,12 +95,12 @@
 
 * **CONFIGURARE**
 
-    **Crestem contextul la 8k:** 
+    **Crestem contextul la 32k (Aider cere 8k doar pentru raspuns; default e 2k; max 32k):** 
     
         sudo systemctl edit ollama
 
             [Service]
-            Environment="OLLAMA_CONTEXT_LENGTH=8192"
+            Environment="OLLAMA_CONTEXT_LENGTH=32768"
 
         sudo systemctl daemon-reload
         sudo systemctl restart ollama        
@@ -194,6 +194,19 @@
 
 
 ## UTILITARE
+
+* **Run Ollama**
+
+    start: 
+    
+        ollama run qwen2.5-coder:7b
+        cd /home/f/Desktop/TSS
+        aider --model ollama_chat/qwen2.5-coder:7b
+
+    stop (intai Aider, apoi Ollama): 
+    
+        /exit 
+        ollama stop qwen2.5-coder:7b
 
 [<< Cuprins](#cuprins)
 
