@@ -138,7 +138,7 @@
 
 **CONFIGURARE**
 
-* Scriem fisierul **.aider.conf.yml** pentru configurarea pornirii (fisierele care trebuiesc incarcate doar in citire) cu comanda simpla: **aider**, care se incarca automat de Aider.
+* Scriem fisierul **.aider.conf.yml** pentru configurarea pornirii (fisierele care trebuiesc incarcate doar in citire), care se incarca automat de Aider.
 * Scriem fisierul **run_testing.sh** pentru a rula comenzile de start automat si a inchide Ollama cand inchidem Aider cu **/exit**.
 
 ## GIT
