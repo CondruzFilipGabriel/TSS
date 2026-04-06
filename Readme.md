@@ -216,7 +216,7 @@
 
 [<< Cuprins](#cuprins)
 
-    cd /home/f/Desktop/TSS
+    cd /****/TSS
 
     aider --model ollama_chat/qwen2.5-coder:7b array5.py
 
@@ -255,10 +255,10 @@
 
 [<< Cuprins](#cuprins)
 
-* **Start Aider + Ollama**
+* **Start Aider + Ollama (in folderul /****/TSS)**
     
         ollama run qwen2.5-coder:7b
-        cd /home/f/Desktop/TSS
+        cd /****/TSS
         aider --model ollama_chat/qwen2.5-coder:7b
 
 * **Exit Aider, apoi oprire Ollama** 
