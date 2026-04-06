@@ -197,11 +197,11 @@
 
 [<< Cuprins](#cuprins)
 
-**pytest si cosmic-ray**
+**pytest, cosmic-ray si coverage**
 
-    python3 -m pip install --user --break-system-packages --upgrade --force-reinstall pytest cosmic-ray
+    python3 -m pip install --user --break-system-packages --upgrade --force-reinstall pytest cosmic-ray coverage
 
-    python3 -m pytest --version
+    pytest --version
 
         pytest 9.0.2
 
@@ -209,7 +209,12 @@
 
         cosmic-ray, version 8.4.6
 
-    cream fisierele de configurare: pytest.ini si cosmic-ray.toml
+    coverage --version
+
+        Coverage.py, version 7.13.5 with C extension
+        Full documentation is at https://coverage.readthedocs.io/en/7.13.5
+
+    * cream fisierele de configurare: pytest.ini si cosmic-ray.toml
 
 
 ## TESTAREA FUNCTIONARII INITIALE
@@ -265,6 +270,24 @@
     
         /exit 
         ollama stop qwen2.5-coder:7b
+
+* **Specificatii**
+
+    * Instructiunile sunt in limba engleza (performanta mai buna).
+    * Are un singur text cu instructiunile de analiza, scris in fisierul **Run.md** (solicitarea a fost optimizata).
+    * Va testa toate functiile si clasele din fisierul **to_test.py**.
+    * Va testa, cu **pytest**, toate functiile de forma **test_\*** din toate fisierele de forma **test_\*.py**. 
+    * Fisierele **test_\*.py** sunt organizate pe categorii de teste, ale caror principii sunt descrise in comentariul initial. AI-ul le va putea completa cu alte teste, dupa cum considera necesar. Initial, AI-ul va gasi in fiecare fisier cate 1 test, folosit ca exemplu de pornire. 
+    * Separat, ulteior, va rula branch coverage cu **coverage.py**.
+    * Separat, ulterior, va testa mutants cu **cosmic-ray**, urmarind distrugerea tuturor mutantilor relevanti si analiza mutantilor supravietuitori.
+    * Pe baza rezultatelor va adauga sau modifica testele existente.
+    * Repetă procesul până când atinge pragurile țintă pentru test pass rate, branch coverage și mutation score sau până la expirarea timpului maxim, scrise in **Run.md**.
+    * Va scrie rezultatele in **Rezultate.json**.
+    * Metadatele testelor rulate vor fi scrise in fisierul **TestsIndex.json**, impreuna cu autorul lor (utilizatorul uman sau modulul AI), iar, la final, rezultatele pentru coverage, mutants si minimul optim de teste.
+    * Determinarea setului optim de teste este realizata separat, printr-un script dedicat din fisierul **Optim.py**, care va evalua automat combinatii de teste si va selecta cel mai mic set capabil sa atinga performanta de referinta a suitei complete.
+    * Fiecare operatie de testare va fi logata in **Logs.jsonl**.
+    * AI-ul va avea la dispozitie resurse documentare in **Docs.md**, privind tipurile de teste, instrumentele pytest si **cosmic-ray**, precum si sintaxa python actualizata.
+    * AI-ul va avea la dispozitie si un fisier **Rules.json**, pentru regulile de rulare.
 
 
 ## AUTOR
