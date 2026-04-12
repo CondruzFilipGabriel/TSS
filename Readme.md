@@ -95,12 +95,12 @@
 
 * **CONFIGURARE**
 
-    **Crestem contextul la 32k (Aider cere 8k doar pentru raspuns; default e 2k; max 32k):** 
+    **Crestem contextul la 16k (Aider cere 8k doar pentru raspuns; default e 2k; max 32k):** 
     
         sudo systemctl edit ollama
 
             [Service]
-            Environment="OLLAMA_CONTEXT_LENGTH=32768"
+            Environment="OLLAMA_CONTEXT_LENGTH=16384"
 
         sudo systemctl daemon-reload
         sudo systemctl restart ollama        
@@ -139,7 +139,7 @@
 **CONFIGURARE**
 
 * Scriem fisierul **.aider.conf.yml** pentru configurarea pornirii (fisierele care trebuiesc incarcate doar in citire), care se incarca automat de Aider.
-* Scriem fisierul **run_testing.sh** pentru a rula comenzile de start automat si a inchide Ollama cand inchidem Aider cu **/exit**.
+* Scriem fisierul **AutoTesting.py** pentru a rula comenzile de start automat si a inchide Ollama si Aider la final.
 
 ## GIT
 
@@ -257,25 +257,62 @@
         Tokens: 626 sent, 35 received.
         ────────────────────────────────────────────────────────────────────────────────
 
+
 ## FUNCTIONALITATI
 
 [<< Cuprins](#cuprins)
 
 * Instructiunile sunt in limba engleza (performanta mai buna).
-* Are un singur text cu instructiunile de analiza, scris in fisierul **Run.md** (solicitarea a fost optimizata).
-* Va testa toate functiile si clasele din fisierul **to_test.py**.
-* Va testa, cu **pytest**, toate functiile de forma **test_\*** din toate fisierele de forma **test_\*.py**.
-* Fisierele **test_\*.py** sunt organizate pe categorii de teste, ale caror principii sunt descrise in comentariul initial. AI-ul le va putea completa cu alte teste, dupa cum considera necesar. Initial, AI-ul va gasi in fiecare fisier cate 1 test, folosit ca exemplu de pornire. 
-* Separat, ulteior, va rula branch coverage cu **coverage.py**.
-* Separat, ulterior, va testa mutants cu **cosmic-ray**, urmarind distrugerea tuturor mutantilor relevanti si analiza mutantilor supravietuitori.
-* Pe baza rezultatelor va adauga sau modifica testele existente.
-* Repetă procesul până când atinge pragurile țintă pentru test pass rate, branch coverage și mutation score sau până la expirarea timpului maxim, scrise in **Run.md**.
-* Va scrie rezultatele in **Rezultate.json**.
-* Metadatele testelor rulate vor fi scrise in fisierul **TestsIndex.json**, impreuna cu autorul lor (utilizatorul uman sau modulul AI), iar, la final, rezultatele pentru coverage, mutants si minimul optim de teste.
-* Determinarea setului optim de teste este realizata separat, printr-un script dedicat din fisierul **Optim.py**, care va evalua automat combinatii de teste si va selecta cel mai mic set capabil sa atinga performanta de referinta a suitei complete.
-* Fiecare operatie de testare va fi logata in **Logs.jsonl**.
-* AI-ul va avea la dispozitie resurse documentare in **Docs.md**, privind tipurile de teste, instrumentele pytest si **cosmic-ray**, precum si sintaxa python actualizata.
-* AI-ul va avea la dispozitie si un fisier **Rules.json**, pentru regulile de rulare.
+* verifica existenta fisierelor si configuratiilor minime necesare pentru rulare: `to_test.py`, `.aider.conf.yml`, `Rules.md`, fisiere `testing_*.md` si folderul `arh`
+
+* creeaza automat fisierele de test corespunzatoare categoriilor definite in `testing_*.md`, sub forma `test_*.py`
+
+* porneste si controleaza local un flux AI bazat pe **Ollama + Aider**, folosit pentru generarea automata de teste Python
+
+* citeste reguli generale si reguli specifice pe categorii din fisiere Markdown si le transforma in prompturi pentru AI
+
+* genereaza initial teste de baza pentru fiecare categorie definita in fisierele `testing_*.md`
+
+* valideaza fiecare functie de test generata de AI astfel incat:
+
+  * sa fie o functie `test_*`
+  * sa poata fi colectata de `pytest`
+  * sa poata fi rulata fara erori tehnice
+
+* foloseste un mecanism iterativ de corectare: daca testul generat este invalid, transmite AI-ului eroarea bruta si cere o versiune corectata
+
+* masoara calitatea suitei de teste existente prin:
+
+  * **pytest** pentru procentul de teste care trec
+  * **branch coverage** pentru acoperirea structurala a codului din `to_test.py`
+  * **Cosmic Ray** pentru mutation testing si detectarea mutantilor ucisi de teste
+
+* adauga un test nou in fisierul categoriei sale doar daca acesta imbunatateste cel putin unul dintre scorurile de testare existente
+
+* elimina automat testele noi care nu aduc nicio imbunatatire, pentru a evita redundanta
+
+* cauta ulterior reguli noi de testare, diferite de cele initiale, care pot creste performanta suitei existente
+
+* reseteaza contextul AI intre etape sau categorii pentru a evita contaminarea contextului cu informatii irelevante din sarcinile anterioare
+
+* inregistreaza in `Logs.jsonl` fiecare regula noua acceptata, impreuna cu:
+
+  * categoria
+  * regula noua
+  * motivarea
+  * imbunatatirea obtinuta
+  * data si autorul
+
+* afiseaza la final regulile noi adaugate in sesiunea curenta sau mentioneaza explicit daca nu au fost identificate teste noi utile
+
+* arhiveaza la final fisierul `to_test.py` si toate fisierele `test_*.py` intr-un subfolder numerotat si datat din `/arh`
+
+* realizeaza, per ansamblu, un proces de **testare automata asistata de AI**, orientat spre:
+
+  * generare de teste `pytest`
+  * validare tehnica automata
+  * optimizare prin eliminarea redundantei
+  * crestere progresiva a acoperirii si a fortei de detectare a defectelor
 
 
 ## UTILIZARE
@@ -284,11 +321,15 @@
 
 * **Start Aider + Ollama (in folderul /****/TSS)**
     
-        ./run_testing.sh
+        ./python3 AutoTesting.py
 
-* **Exit Aider -> implica automat oprire model Ollama** 
-    
-        /exit
+* **Exit Aider + oprire model Ollama** - se executa automat la finalizare.
+
+* La final sunt afisate testele adaugate.
+
+* In fisierul Logs.jsonl se vor regasi toate schimbarile (testele adaugate) de la toate rularile
+
+* In folderul /arh se vor muta, intr-un subfolder cu numele format din data si ziua curenta, fisierele to_test.py si test_*.py pentru a putea fi consultate ulterior.
 
 
 ## AUTOR

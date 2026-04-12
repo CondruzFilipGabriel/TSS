@@ -1,5 +1,3 @@
 model: ollama_chat/qwen2.5-coder:7b
 read:
-  - Run.md
-  - Docs.md
-  - Rules.json
+  - to_test.py
