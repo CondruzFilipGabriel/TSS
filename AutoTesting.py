@@ -48,7 +48,7 @@ class AutoTesting:
         self.fisiere_testing_md = []
 
         # Timeout de referinta pentru interactiunea cu AI-ul.
-        self.timeout_sec = 100
+        self.timeout_sec = 200
 
         # Numarul de reguli noi adaugate in sesiunea curenta.
         self.numar_reguli_adaugate = 0
