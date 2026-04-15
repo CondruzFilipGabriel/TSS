@@ -58,15 +58,10 @@ class AutoTesting:
         self.ollama_process = None
 
         # Intreg fluxul este orchestrat direct din constructor.
-        self._afiseaza_status("Checking initial conditions...")
         self.verifica_conditii_initiale()
-        self._afiseaza_status("Starting initial test generation stage...")
         self.scrie_teste_initiale()
-        self._afiseaza_status("Starting new test discovery stage...")
         self.gaseste_teste_noi()
-        self._afiseaza_status("Archiving generated files...")
         self.arhiveaza()
-        self._afiseaza_status("Displaying accepted new rules...")
         self.afiseaza_reguli_adaugate()
 
     # -------------------------------------------------------------------------
@@ -291,7 +286,11 @@ class AutoTesting:
 
     def _scoruri_curente(self) -> tuple[float, float, float]:
         """Intoarce scorurile curente: pytest, coverage, cosmic-ray."""
-        return self._evalueaza_suita()
+        return (
+            self.test_pytest(),
+            self.test_coverage(),
+            self.test_cosmic_ray(),
+        )
 
     def _exista_imbunatatire(
         self,
@@ -348,36 +347,6 @@ class AutoTesting:
 
         return None
 
-    def _afiseaza_status(self, mesaj: str):
-        """Afiseaza un mesaj scurt de progres pentru pasii principali ai fluxului."""
-        print(f"[AutoTesting] {mesaj}", flush=True)
-
-    def _rezuma_text(self, text: str, limita: int = 120) -> str:
-        """Compacteaza un text pentru afisare in logurile de progres."""
-        text = " ".join(text.split())
-        if len(text) <= limita:
-            return text
-        return text[:limita - 3] + "..."
-
-    def _evalueaza_suita(self) -> tuple[float, float, float]:
-        """
-        Evalueaza suita curenta de teste cu toate tool-urile folosite de aplicatie
-        si afiseaza progresul fiecarui pas major.
-        """
-        self._afiseaza_status("Running pytest...")
-        scor_pytest = self.test_pytest()
-
-        self._afiseaza_status("Running branch coverage...")
-        scor_coverage = self.test_coverage()
-
-        self._afiseaza_status("Running mutation testing with Cosmic Ray...")
-        scor_cosmic = self.test_cosmic_ray()
-
-        self._afiseaza_status(
-            f"Current scores -> pytest: {scor_pytest}%, coverage: {scor_coverage}%, cosmic-ray: {scor_cosmic}%"
-        )
-        return (scor_pytest, scor_coverage, scor_cosmic)
-
     # -------------------------------------------------------------------------
     # Verificari initiale si jurnalizare
     # -------------------------------------------------------------------------
@@ -427,7 +396,6 @@ class AutoTesting:
 
         folder_arh = self.folder_curent / "arh"
         folder_arh.mkdir(exist_ok=True)
-        self._afiseaza_status("Initial conditions are valid.")
 
     def log(
         self,
@@ -472,7 +440,6 @@ class AutoTesting:
             f.write(json.dumps(intrare, ensure_ascii=False) + "\n")
 
     def arhiveaza(self):
-        self._afiseaza_status("Archiving to_test.py and all test_*.py files...")
         """
         Muta fisierul to_test.py si toate fisierele test_*.py intr-un nou
         subfolder numeric din /arh.
@@ -565,53 +532,33 @@ class AutoTesting:
     def _citeste_pana_la_prompt(self):
         """
         Citeste iesirea procesului Aider pana cand:
-        - apare promptul interactiv recunoscut
-        - sau expira timeout-ul de citire
-
-        In plus, afiseaza brut ce primeste de la Aider, pentru debugging.
+        - apare promptul interactiv
+        - sau expira timeout-ul de citire.
         """
         iesire = ""
         start = time.time()
 
-        print("[AutoTesting] Waiting for Aider output...")
-
         while time.time() - start < self.timeout_sec:
             if self.aider_process is None or self.aider_process.stdout is None:
-                print("[AutoTesting] Aider stdout is not available.")
                 break
 
             gata, _, _ = select.select([self.aider_process.stdout], [], [], 0.2)
 
-            if not gata:
-                continue
+            if gata:
+                bucata = os.read(
+                    self.aider_process.stdout.fileno(),
+                    4096,
+                ).decode("utf-8", errors="replace")
 
-            bucata_bytes = os.read(self.aider_process.stdout.fileno(), 4096)
-            if not bucata_bytes:
-                print("[AutoTesting] Aider produced no more output.")
-                break
+                if not bucata:
+                    break
 
-            bucata = bucata_bytes.decode("utf-8", errors="replace")
-            iesire += bucata
+                iesire += bucata
 
-            print("[AutoTesting] Aider raw chunk:")
-            print(repr(bucata))
-
-            # Prompturi posibile pe care le putem considera "ready"
-            if (
-                "\n> " in iesire
-                or iesire.endswith("> ")
-                or "\n>>> " in iesire
-                or iesire.endswith(">>> ")
-            ):
-                print("[AutoTesting] Aider prompt detected.")
-                return iesire
-
-        print("[AutoTesting] Timeout while waiting for Aider prompt/output.")
-        print("[AutoTesting] Aider accumulated output:")
-        print(repr(iesire))
+                if "\n> " in iesire or iesire.endswith("> "):
+                    break
 
         return iesire
-
 
     def start_ai(self):
         """
@@ -621,7 +568,6 @@ class AutoTesting:
         consuma promptul initial ca sa poata primi imediat comenzi.
         """
         if self.ollama_process is None or self.ollama_process.poll() is not None:
-            self._afiseaza_status("Starting Ollama...")
             self.ollama_process = subprocess.Popen(
                 ["ollama", "serve"],
                 cwd=self.folder_curent,
@@ -631,9 +577,8 @@ class AutoTesting:
             time.sleep(2)
 
         if self.aider_process is None or self.aider_process.poll() is not None:
-            self._afiseaza_status("Starting Aider...")
             self.aider_process = subprocess.Popen(
-                ["aider", "--no-gitignore"],
+                ["aider"],
                 cwd=self.folder_curent,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
@@ -641,21 +586,13 @@ class AutoTesting:
                 text=False,
                 bufsize=0,
             )
-            self._afiseaza_status("Aider started. Waiting for the initial prompt...")
-            startup_output = self._citeste_pana_la_prompt()
-            if self.aider_process.poll() is not None:
-                self._afiseaza_status(
-                    f"Aider exited during startup with code {self.aider_process.returncode}. Output summary: {self._rezuma_text(startup_output)}"
-                )
-            elif not startup_output.strip():
-                self._afiseaza_status("Aider startup produced no visible output before returning control.")
+            self._citeste_pana_la_prompt()
 
     def reset_context(self):
         """
         Reseteaza contextul AI-ului prin inchiderea procesului Aider si
         repornirea lui. Ollama ramane pornit.
         """
-        self._afiseaza_status("Stopping AI tools...")
         if self.aider_process is not None and self.aider_process.poll() is None:
             self.aider_process.terminate()
             try:
@@ -664,7 +601,6 @@ class AutoTesting:
                 self.aider_process.kill()
                 self.aider_process.wait()
 
-        self._afiseaza_status("Resetting AI context...")
         self.aider_process = None
         self.start_ai()
 
@@ -672,29 +608,17 @@ class AutoTesting:
         """
         Trimite o comanda catre Aider-ul persistent si intoarce raspunsul brut
         citit pana la urmatorul prompt.
-
-        In plus, afiseaza comanda trimisa si raspunsul primit, pentru debugging.
         """
         if self.aider_process is None or self.aider_process.poll() is not None:
-            raise RuntimeError("Aider is not running.")
+            raise RuntimeError("Aider nu este pornit.")
 
         if self.aider_process.stdin is None:
-            raise RuntimeError("Aider stdin is not available.")
-
-        print("[AutoTesting] Sending command to Aider:")
-        print(comanda)
-        print("[AutoTesting] End of command sent to Aider.")
+            raise RuntimeError("Fluxul stdin al Aider nu este disponibil.")
 
         self.aider_process.stdin.write((comanda + "\n").encode("utf-8"))
         self.aider_process.stdin.flush()
 
-        raspuns = self._citeste_pana_la_prompt()
-
-        print("[AutoTesting] Aider full response:")
-        print(raspuns)
-        print("[AutoTesting] End of Aider response.")
-
-        return raspuns
+        return self._citeste_pana_la_prompt()
 
     def stop_ai(self):
         """
@@ -723,7 +647,6 @@ class AutoTesting:
     # -------------------------------------------------------------------------
 
     def validate(self, functie: str):
-        self._afiseaza_status("Validating the proposed test function...")
         """
         Verifica daca textul primit reprezinta strict o singura functie test_*
         valida din punct de vedere sintactic si executabila de pytest.
@@ -903,47 +826,24 @@ class AutoTesting:
         try:
             self._scrie_text(fisier_config, continut_config)
 
-            self._afiseaza_status("Cosmic Ray: writing temporary configuration file...")
-            self._afiseaza_status("Cosmic Ray: preparing mutation session...")
             rezultat_init = self._ruleaza_comanda(
                 f'cosmic-ray init "{fisier_config.name}" "{fisier_sesiune.name}"'
             )
-            self._afiseaza_status(
-                f"Cosmic Ray: init finished with return code {rezultat_init.returncode}."
-            )
             if rezultat_init.returncode != 0:
-                self._afiseaza_status(
-                    f"Cosmic Ray init error: {self._rezuma_text(rezultat_init.stdout + rezultat_init.stderr)}"
-                )
                 return 0.0
 
-            self._afiseaza_status("Cosmic Ray: running baseline tests...")
             rezultat_baseline = self._ruleaza_comanda(
                 f'cosmic-ray baseline --session-file "{fisier_baseline.name}" "{fisier_config.name}"'
             )
-            self._afiseaza_status(
-                f"Cosmic Ray: baseline finished with return code {rezultat_baseline.returncode}."
-            )
             if rezultat_baseline.returncode != 0:
-                self._afiseaza_status(
-                    f"Cosmic Ray baseline error: {self._rezuma_text(rezultat_baseline.stdout + rezultat_baseline.stderr)}"
-                )
                 return 0.0
 
-            self._afiseaza_status("Cosmic Ray: testing mutants. This can take a long time...")
             rezultat_exec = self._ruleaza_comanda(
                 f'cosmic-ray exec "{fisier_config.name}" "{fisier_sesiune.name}"'
             )
-            self._afiseaza_status(
-                f"Cosmic Ray: mutant execution finished with return code {rezultat_exec.returncode}."
-            )
             if rezultat_exec.returncode != 0:
-                self._afiseaza_status(
-                    f"Cosmic Ray exec error: {self._rezuma_text(rezultat_exec.stdout + rezultat_exec.stderr)}"
-                )
                 return 0.0
 
-            self._afiseaza_status("Reading Cosmic Ray report...")
             rezultat_raport = self.terminal(f'cr-report "{fisier_sesiune.name}"')
 
             potrivire_supravietuitori = re.search(
@@ -1007,7 +907,6 @@ class AutoTesting:
 
         try:
             for index_categorie, fisier_md in enumerate(self.fisiere_testing_md):
-                self._afiseaza_status(f"Initial stage: processing category {fisier_md.stem[len('testing_'):] }...")
                 reguli_generale_categorie = self._extrage_reguli_generale_categorie(
                     fisier_md
                 )
@@ -1020,13 +919,11 @@ class AutoTesting:
                     self.reset_context()
 
                 for tip_test in tipuri_teste:
-                    self._afiseaza_status(f"AI is asked to propose an initial test for rule: {tip_test}")
                     deadline = time.time() + self.timeout_sec
                     mesaj_initial = "\n".join(
                         [instructiuni_generale, reguli_generale_categorie, tip_test]
                     ).strip()
 
-                    self._afiseaza_status("AI is asked to propose a new test...")
                     functie_valida = self._solicita_functie_valida(
                         mesaj_initial=mesaj_initial,
                         deadline=deadline,
@@ -1036,23 +933,17 @@ class AutoTesting:
                     )
 
                     if functie_valida is None:
-                        self._afiseaza_status("The proposed test could not be validated in time. Moving to the next rule.")
                         continue
 
-                    self._afiseaza_status("AI proposed a new test. Evaluating the current suite before adding it...")
                     scoruri_inainte = self._scoruri_curente()
-                    self._afiseaza_status(f"Adding proposed test to {fisier_test_py.name}...")
                     self._adauga_functie_in_fisier(fisier_test_py, functie_valida)
-                    self._afiseaza_status("Evaluating the suite after adding the proposed test...")
                     scoruri_dupa = self._scoruri_curente()
 
                     if self._exista_imbunatatire(scoruri_inainte, scoruri_dupa):
-                        self._afiseaza_status("The proposed initial test was accepted.")
                         continue
 
                     nume_functie = self._extrage_nume_functie_test(functie_valida)
                     if nume_functie is not None:
-                        self._afiseaza_status("The proposed initial test was rejected. Removing it from the file...")
                         self._elimina_functie_din_fisier(fisier_test_py, nume_functie)
 
             self._adauga_comentariu_final_teste_initiale()
@@ -1086,7 +977,6 @@ class AutoTesting:
         try:
             for fisier_md in self.fisiere_testing_md:
                 categorie = fisier_md.stem[len("testing_"):]
-                self._afiseaza_status(f"New test discovery stage: processing category {categorie}...")
                 fisier_test_py = self._fisier_test_pentru_md(fisier_md)
                 deadline_categorie = time.time() + 10 * self.timeout_sec
 
@@ -1124,7 +1014,6 @@ class AutoTesting:
                     )
 
                     if functie_valida is None:
-                        self._afiseaza_status("No valid proposal was obtained in time for this category.")
                         self.reset_context()
                         break
 
@@ -1133,19 +1022,16 @@ class AutoTesting:
                         self.reset_context()
                         break
 
-                    self._afiseaza_status("AI proposed a new test. Evaluating the current suite before and after adding it...")
                     self._adauga_functie_in_fisier(fisier_test_py, functie_valida)
                     scoruri_dupa = self._scoruri_curente()
 
                     if not self._exista_imbunatatire(scoruri_inainte, scoruri_dupa):
-                        self._afiseaza_status("The proposed test was rejected. Removing it from the file...")
                         self._elimina_functie_din_fisier(fisier_test_py, nume_functie)
 
                         if time.time() >= deadline_categorie:
                             self.reset_context()
                             break
 
-                        self._afiseaza_status("Asking AI for a better proposal in the same category...")
                         functie_valida = self._solicita_functie_valida(
                             mesaj_initial=(
                                 "The testing parameters were not improved. "
@@ -1167,18 +1053,13 @@ class AutoTesting:
                             self.reset_context()
                             break
 
-                        self._afiseaza_status(f"Adding improved proposal to {fisier_test_py.name}...")
                         self._adauga_functie_in_fisier(fisier_test_py, functie_valida)
-                        self._afiseaza_status("Evaluating the suite after adding the improved proposal...")
                         scoruri_dupa = self._scoruri_curente()
 
                         if not self._exista_imbunatatire(scoruri_inainte, scoruri_dupa):
-                            self._afiseaza_status("The improved proposal was also rejected. Removing it from the file...")
                             self._elimina_functie_din_fisier(fisier_test_py, nume_functie)
                             continue
 
-                    self._afiseaza_status("The proposed test was accepted.")
-                    self._afiseaza_status("The proposed test was accepted.")
                     self.numar_reguli_adaugate += 1
 
                     imbunatatire = self._format_imbunatatire(
@@ -1186,8 +1067,6 @@ class AutoTesting:
                         scoruri_dupa,
                     )
 
-                    self._afiseaza_status("Requesting the general rule and reasoning for the accepted test...")
-                    self._afiseaza_status("Aider: asking for the abstract rule and reasoning behind the accepted test...")
                     meta_info = self.execute(
                         "State exactly two fields in English on separate lines:\n"
                         f"Rule: the new testing rule implemented for category {categorie}, different from the existing ones.\n"
@@ -1196,8 +1075,6 @@ class AutoTesting:
 
                     regula, motivare = self._extrage_regula_motivare(meta_info)
 
-                    self._afiseaza_status("Writing the accepted rule to Logs.jsonl...")
-                    self._afiseaza_status("Writing the accepted rule to Logs.jsonl...")
                     self.log(
                         categorie=categorie,
                         regula=regula,
