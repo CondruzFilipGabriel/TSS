@@ -1,32 +1,14 @@
-# General directions for functional testing
+# Functional testing
 
-Look for tests based on expected behavior.
+Focus on observable behavior.
 
-Search for:
-- valid inputs
-- invalid inputs
-- expected outputs
+Functional rules should target things such as:
+- returned results
 - expected errors
-- visible side effects
+- input validation
+- behavior differences between input categories
+- boundary situations with functional impact
 
-Look for input groups that should produce the same behavior.
+A functionally new test should check a genuinely different observable behavior, not just a superficial variation of an already tested invalid input.
 
-Look for:
-- minimum valid values
-- maximum valid values
-- values just below limits
-- values just above limits
-- empty or missing values when relevant
-
-Look for important input relations:
-- inputs that must appear together
-- inputs that cannot appear together
-- inputs that change behavior only in specific combinations
-
-Look for different observable outcomes and the inputs that should produce them.
-
-Prefer:
-- valid vs invalid cases
-- edge cases
-- special input combinations
-- similar inputs that should produce different results
+1. test a valid input case that should return the normal accepted result

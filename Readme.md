@@ -5,11 +5,11 @@
 * [Sistem de calcul utilizat](#sistem-de-calcul-utilizat)
 * [Solutia software implementata](#solutia-software-implementata)
 * [Ollama](#ollama)
-* [Aider](#aider)
 * [Git](#git)
 * [Utilitare](#utilitare)
 * [Testarea functionarii initiale](#testarea-functionarii-initiale)
 * [Functionalitati](#functionalitati)
+* [Flux de executie](#flux-de-executie)
 * [Utilizare](#utilizare)
 * [Autor](#autor)
 
@@ -18,43 +18,43 @@
 [<< Cuprins](#cuprins)
 
     Utilizarea IA pentru imbunatatirea testelor unitare existente,
-    asigurand o acoperire cat mai eficienta a codului sursa (de exemplu, 
-    marirea scorului de acoperire la nivel de instructiune, decizie, 
-    conditie, mutatie generata de un framework de testare unitara) 
-    
-    Implementarea unui sistem care sa identifice automat punctele critice 
+    asigurand o acoperire cat mai eficienta a codului sursa (de exemplu,
+    marirea scorului de acoperire la nivel de instructiune, decizie,
+    conditie si mutatie).
+
+    Implementarea unui sistem care sa identifice automat punctele critice
     ale codului si sa prioritizeze testele in functie de acestea.
 
 ## Sistem de calcul utilizat
 
 [<< Cuprins](#cuprins)
 
-    Laptop producator: 
+    Laptop producator:
         LENOVO IdeaPad Pro 5 14AHP9
-    processor:         
+    Processor:
         AMD Ryzen 7 8845HS Radeon (8 nuclee, frecventa 3.8 - 5.1 GHz)
-    RAM:               
+    RAM:
         16GB LPDDR5x
-    SSD:               
-        512GB SSD, AMD Radeon™
-    Sistem de operare: 
+    SSD:
+        512GB SSD
+    Sistem de operare:
         Ubuntu 24.04.4 LTS
 
 ## Solutia software implementata
 
 [<< Cuprins](#cuprins)
 
-    Sistem baza pe AI local (offline):
+    Sistem bazat pe AI local (offline):
 
-        Ollama (AI language agent) cu Qwen2.5-Coder pe 7B
-
-        Aider ("Ai pair programming": edit & run files)
+        Ollama (agent AI local)
+        Qwen2.5-Coder 7B (modelul folosit pentru generare)
+        AutoTesting.py (orchestratorul principal al framework-ului)
 
     Tools:
 
-        pytest (tester automat)
-
-        cosmic-ray (mutant testing & branch coverage)
+        pytest (executia si validarea testelor)
+        coverage (branch coverage)
+        mutmut (mutation testing)
 
 ## Ollama
 
@@ -74,74 +74,40 @@
 
     ollama pull qwen2.5-coder:7b
 
-        verifying sha256 digest 
-        writing manifest 
+        verifying sha256 digest
+        writing manifest
         success
 
     sudo systemctl status ollama
 
         ollama.service - Ollama Service
-        Loaded: loaded (/etc/systemd/system/ollama.service; enabled preset: enabl>
-        Active: active (running) since Sun 2026-04-05 11:06:34 EEST 15min ago
-        Main PID: 6219 (ollama)
-        Tasks: 23 (limit: 16336)
-        Memory: 2.2G (peak: 4.3G)
-            CPU: 33.402s
-        CGroup: /system.slice/ollama.service
-                └─6219 /usr/local/bin/ollama serve
+        Loaded: loaded (/etc/systemd/system/ollama.service; enabled)
+        Active: active (running)
 
-        // Ollama rulează ca serviciu systemd
-
+        // Ollama ruleaza ca serviciu systemd
 
 * **CONFIGURARE**
 
-    **Crestem contextul la 16k (Aider cere 8k doar pentru raspuns; default e 2k; max 32k):** 
-    
+    **Optional: marim contextul modelului**
+
         sudo systemctl edit ollama
 
             [Service]
-            Environment="OLLAMA_CONTEXT_LENGTH=16384"
+            Environment="OLLAMA_CONTEXT_LENGTH=20000"
 
         sudo systemctl daemon-reload
-        sudo systemctl restart ollama        
+        sudo systemctl restart ollama
         sudo systemctl status ollama
 
-    **Setam variabilele:**
-
-        export PATH="$HOME/.local/bin:$PATH"
-        export OLLAMA_API_BASE=http://127.0.0.1:11434
-        aider --version
-
-    **Permanentizam:**
+    **Permanentizam PATH pentru utilitarele instalate user-local:**
 
         echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
-        echo 'export OLLAMA_API_BASE=http://127.0.0.1:11434' >> ~/.bashrc
         source ~/.bashrc
 
+    Framework-ul comunica direct cu API-ul Ollama prin HTTP.
+    Modelul folosit implicit este configurat in `Config.py`.
 
-## AIDER
-
-[<< Cuprins](#cuprins)
-
-**INSTALARE**
-
-    curl -LsSf https://aider.chat/install.sh | sh
-
-        Installed 1 executable: aider
-
-    export PATH="$HOME/.local/bin:$PATH"
-
-    aider --version
-
-        aider 0.86.2
-
-
-**CONFIGURARE**
-
-* Scriem fisierul **.aider.conf.yml** pentru configurarea pornirii (fisierele care trebuiesc incarcate doar in citire), care se incarca automat de Aider.
-* Scriem fisierul **AutoTesting.py** pentru a rula comenzile de start automat si a inchide Ollama si Aider la final.
-
-## GIT
+## Git
 
 [<< Cuprins](#cuprins)
 
@@ -161,10 +127,10 @@
 
     git remote -v
 
-        origin	https://github.com/CondruzFilipGabriel/TSS.git (fetch)
-        origin	https://github.com/CondruzFilipGabriel/TSS.git (push)
+        origin  https://github.com/CondruzFilipGabriel/TSS.git (fetch)
+        origin  https://github.com/CondruzFilipGabriel/TSS.git (push)
 
-    ssh-keygen -t ed25519 -C "\*@\*.\*"
+    ssh-keygen -t ed25519 -C "*@*.*"
 
     eval "$(ssh-agent -s)"
 
@@ -184,7 +150,7 @@
 
     git config --global user.name "*******"
 
-    git config --global user.email "\*@\*.\*"
+    git config --global user.email "*@*.*"
 
     git push -u origin main
 
@@ -194,145 +160,153 @@
 
     git add .
 
-    git commit - m "Eticheta privind noul update"
+    git commit -m "Eticheta privind noul update"
 
     git push
 
-
-## UTILITARE
+## Utilitare
 
 [<< Cuprins](#cuprins)
 
-**pytest, cosmic-ray si coverage**
+**pytest, mutmut si coverage**
 
-    python3 -m pip install --user --break-system-packages --upgrade --force-reinstall pytest cosmic-ray coverage
+    python3 -m pip install --user --break-system-packages --upgrade --force-reinstall pytest mutmut coverage
 
     pytest --version
 
         pytest 9.0.2
 
-    cosmic-ray --version
+    mutmut --version
 
-        cosmic-ray, version 8.4.6
+        mutmut, version 3.5.0
 
     coverage --version
 
         Coverage.py, version 7.13.5 with C extension
-        Full documentation is at https://coverage.readthedocs.io/en/7.13.5
 
-    * cream fisierele de configurare: pytest.ini si cosmic-ray.toml
+    * se creeaza fisierele de configurare necesare: pytest.ini si pyproject.toml
 
+**Comenzi utile de verificare manuala**
 
-## TESTAREA FUNCTIONARII INITIALE
+    python3 -m pytest -q
+
+    python3 -m coverage erase
+    python3 -m coverage run --branch -m pytest -q
+    python3 -m coverage report -m --include=to_test.py
+
+    mutmut run
+    mutmut results
+
+## Testarea functionarii initiale
 
 [<< Cuprins](#cuprins)
 
     cd /****/TSS
 
-    aider --model ollama_chat/qwen2.5-coder:7b array5.py
+    python3 AutoTesting.py
 
-        ────────────────────────────────────────────────────────────────────────────────
-        Aider v0.86.2
-        Model: ollama_chat/qwen2.5-coder:7b with whole edit format
-        Git repo: none
-        Repo-map: disabled
-        Added array5.py to the chat.
-        ────────────────────────────────────────────────────────────────────────────────
-        array5.py                                                                       
-        > hello                                                                         
+    La final se verifica:
+        - continutul fisierelor test_*.py
+        - regulile nou adaugate in testing_*.md
+        - istoricul din Logs.jsonl
+        - arhivarea in folderul arh/
+        - logurile tehnice din folderul logs/
 
-        Understood. I will follow the provided guidelines for suggesting changes to     
-        files. Please let me know what changes you would like made.                     
-
-
-        Tokens: 654 sent, 26 received.
-        ────────────────────────────────────────────────────────────────────────────────
-        > tell me a bit about yourself                                                  
-
-        I am an AI language model designed to assist with programming tasks. I can help 
-        answer questions, provide explanations, and suggest changes to code. How can I  
-        assist you today?                                                               
-
-
-        Tokens: 626 sent, 35 received.
-        ────────────────────────────────────────────────────────────────────────────────
-
-
-## FUNCTIONALITATI
+## Functionalitati
 
 [<< Cuprins](#cuprins)
 
-* Instructiunile sunt in limba engleza (performanta mai buna).
-* verifica existenta fisierelor si configuratiilor minime necesare pentru rulare: `to_test.py`, `.aider.conf.yml`, `Rules.md`, fisiere `testing_*.md` si folderul `arh`
+* instructiunile catre AI sunt formulate in limba engleza
+
+* verifica existenta fisierelor si configuratiilor minime necesare pentru rulare:
+  * `to_test.py`
+  * `Rules.md`
+  * fisierele `testing_*.md`
+  * folderul `arh`
 
 * creeaza automat fisierele de test corespunzatoare categoriilor definite in `testing_*.md`, sub forma `test_*.py`
 
-* porneste si controleaza local un flux AI bazat pe **Ollama + Aider**, folosit pentru generarea automata de teste Python
+* comunica direct cu Ollama prin API HTTP pentru generarea automata de teste Python
 
-* citeste reguli generale si reguli specifice pe categorii din fisiere Markdown si le transforma in prompturi pentru AI
+* citeste regulile generale din `Rules.md` si specificul categoriilor din `testing_*.md`, apoi construieste prompturile corespunzatoare fiecarei etape
 
 * genereaza initial teste de baza pentru fiecare categorie definita in fisierele `testing_*.md`
 
 * valideaza fiecare functie de test generata de AI astfel incat:
-
   * sa fie o functie `test_*`
   * sa poata fi colectata de `pytest`
   * sa poata fi rulata fara erori tehnice
 
-* foloseste un mecanism iterativ de corectare: daca testul generat este invalid, transmite AI-ului eroarea bruta si cere o versiune corectata
+* foloseste un mecanism iterativ de corectare: daca testul generat este invalid, transmite AI-ului eroarea de validare si cere o versiune corectata
 
-* masoara calitatea suitei de teste existente prin:
+* masoara calitatea testelor prin:
+  * **pytest** pentru validitatea suitei
+  * **coverage** pentru branch coverage asupra `to_test.py`
+  * **mutmut** pentru mutation testing asupra `to_test.py`
 
-  * **pytest** pentru procentul de teste care trec
-  * **branch coverage** pentru acoperirea structurala a codului din `to_test.py`
-  * **Cosmic Ray** pentru mutation testing si detectarea mutantilor ucisi de teste
+* in etapa 2, accepta un test nou doar daca acesta imbunatateste scorurile categoriei curente, evaluate pe fisierul de test al categoriei respective
 
-* adauga un test nou in fisierul categoriei sale doar daca acesta imbunatateste cel putin unul dintre scorurile de testare existente
+* optimizeaza separat bibliotecile de teste pe categorii, de exemplu:
+  * `test_functional.py` pentru categoria functionala
+  * `test_structural.py` pentru categoria structurala
 
-* elimina automat testele noi care nu aduc nicio imbunatatire, pentru a evita redundanta
+* dupa acceptarea unui test nou, cere separat de la AI:
+  * regula generala asociata testului
+  * motivarea utilitatii testului
 
-* cauta ulterior reguli noi de testare, diferite de cele initiale, care pot creste performanta suitei existente
-
-* reseteaza contextul AI intre etape sau categorii pentru a evita contaminarea contextului cu informatii irelevante din sarcinile anterioare
+* adauga regula acceptata in fisierul `testing_*.md` al categoriei curente
 
 * inregistreaza in `Logs.jsonl` fiecare regula noua acceptata, impreuna cu:
-
   * categoria
-  * regula noua
+  * regula
   * motivarea
   * imbunatatirea obtinuta
   * data si autorul
 
-* afiseaza la final regulile noi adaugate in sesiunea curenta sau mentioneaza explicit daca nu au fost identificate teste noi utile
+* elimina automat propunerile care nu aduc imbunatatire, pentru a reduce redundanta si zgomotul din library
 
-* arhiveaza la final fisierul `to_test.py` si toate fisierele `test_*.py` intr-un subfolder numerotat si datat din `/arh`
+* reseteaza contextul AI intre etape sau categorii pentru a evita contaminarea contextului cu informatii irelevante
 
-* realizeaza, per ansamblu, un proces de **testare automata asistata de AI**, orientat spre:
+* arhiveaza la final fisierul `to_test.py` si toate fisierele `test_*.py` intr-un subfolder numerotat si datat din `arh/`
 
+* realizeaza un proces de testare automata asistata de AI, orientat spre:
   * generare de teste `pytest`
   * validare tehnica automata
-  * optimizare prin eliminarea redundantei
-  * crestere progresiva a acoperirii si a fortei de detectare a defectelor
+  * crestere progresiva a branch coverage
+  * crestere progresiva a mutation score
+  * dezvoltarea unei biblioteci de reguli de testare pe categorii
 
-
-## UTILIZARE
+## Flux de executie
 
 [<< Cuprins](#cuprins)
 
-* **Start Aider + Ollama (in folderul /****/TSS)**
-    
-        ./python3 AutoTesting.py
+1. Se curata workspace-ul de fisierele si folderele temporare.
+2. Se verifica structura minima a proiectului.
+3. Se genereaza testele initiale pentru regulile explicite existente in `testing_*.md`.
+4. Se cauta teste noi pentru fiecare categorie.
+5. Pentru fiecare test nou acceptat, se cere separat regula si motivarea.
+6. Se actualizeaza fisierele `test_*.py`, `testing_*.md` si `Logs.jsonl`.
+7. Se arhiveaza rezultatele si se curata fisierele si folderele temporare.
 
-* **Exit Aider + oprire model Ollama** - se executa automat la finalizare.
+## Utilizare
 
-* La final sunt afisate testele adaugate.
+[<< Cuprins](#cuprins)
 
-* In fisierul Logs.jsonl se vor regasi toate schimbarile (testele adaugate) de la toate rularile
+* **Pornire framework (in folderul /****/TSS)**
 
-* In folderul /arh se vor muta, intr-un subfolder cu numele format din data si ziua curenta, fisierele to_test.py si test_*.py pentru a putea fi consultate ulterior.
+        python3 AutoTesting.py
 
+* La final sunt afisate regulile noi adaugate in sesiunea curenta.
 
-## AUTOR
+* In fisierul `Logs.jsonl` se regasesc toate regulile acceptate de-a lungul rularilor.
+
+* In fisierele `testing_*.md` se construieste treptat biblioteca de reguli de testare pe categorii.
+
+* In folderul `arh/` se salveaza, intr-un subfolder numerotat si datat, fisierele `to_test.py` si `test_*.py`.
+
+* In folderul `logs/` se salveaza logurile tehnice ale framework-ului si interactiunile brute cu Ollama, daca debugging-ul este activ.
+
+## Autor
 
 [<< Cuprins](#cuprins)
 

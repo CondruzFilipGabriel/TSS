@@ -1,0 +1,5 @@
+[tool.mutmut]
+paths_to_mutate = ["to_test.py"]
+pytest_add_cli_args_test_selection = ["test_functional.py", "test_structural.py"]
+pytest_add_cli_args = ["-q"]
+debug = true

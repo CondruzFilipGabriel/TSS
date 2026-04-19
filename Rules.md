@@ -1,35 +1,41 @@
-# 
-* You are not allowed to modify any files. All file modifications are performed automatically by the framework.
-* Your response must contain exactly one Python test function and nothing else.
-* The function must be compatible with pytest.
-* The function name must start with `test_` and continue with a descriptive name for the testing rule being implemented.
-* The function must test the code in `to_test.py`.
-* The function must implement exactly the testing rule requested below, from the indicated category.
-* Do not write explanations, titles, introductory comments, markdown, or any additional text.
-* Do not write more than one function.
-* Do not modify existing tests and do not refer to files other than what is strictly necessary for testing `to_test.py`.
-* Do not use pytest fixtures, markers, test classes, or external helper functions.
-* Return only the function code.
+# Initial tests
 
-# 
-* You are not allowed to modify to_test.py or any other file. All file modifications are performed automatically by the framework.
-* Your goal is to propose exactly one new pytest test function, in the requested category, that improves the current test suite for to_test.py.
-* Your initial response must contain exactly one Python test function and nothing else.
-* The function must be compatible with pytest.
-* The function name must start with test_ and continue with a descriptive name for the testing rule being implemented.
-* The function must test the code in to_test.py.
-* The function must belong to the requested testing category and must implement a genuinely new testing rule, not a superficial reformulation of an existing one.
-* The function must improve the current test suite, not merely be syntactically valid.
-* Prefer tests that cover behaviors, branches, edge cases, or fault-detection situations that are not already effectively covered by the existing suite.
-* Do not write explanations, titles, introductory comments, markdown, or any additional text.
-* Do not write more than one function.
-* Do not use pytest fixtures, markers, test classes, or external helper functions.
-* Do not refer to files other than what is strictly necessary for testing to_test.py.
-* Return only the function code.
-* If the proposed test does not improve the current test suite, you will be asked to search for a better test in the same category.
-* If the proposed test is accepted, you will later be asked separately to describe the testing rule behind it and the reasoning used to choose it.
-* When that later request is made, the rule must be expressed in a general reusable form.
-* That rule must not contain concrete names from the current code, including function names, variable names, class names, instance names, or implementation-specific values.
-* The rule must describe only the general context in which it applies, the property being tested, and the expected behavior.
-* The rule must be precise enough to allow reconstruction of a similar test for another Python function or class tested with pytest.
-* The rule must be an abstract testing principle, not a description tied to the current implementation.
+* Return exactly one concrete Python pytest test function and nothing else.
+* The test must target only the code from `to_test.py`.
+* The test must implement exactly the requested rule from the given category.
+* First priority is correctness and pytest validity against the provided source code.
+* Second priority is rule relevance.
+* Third priority is simplicity.
+* Derive every expected result directly from the provided source code.
+* Do not infer intended behavior beyond what is directly supported by the current code.
+* If the requested rule is broad, choose one representative case that fits the rule reliably.
+* Do not write imports, markdown, explanations, placeholders, helper code, or more than one function.
+
+# New tests
+
+* Return exactly one concrete Python pytest test function and nothing else.
+* The test must target only the code from `to_test.py`.
+* The test must belong to the requested category and embody a genuinely new rule in that category.
+* The test is useful only if it is correct, valid under pytest, and improves the measured score when evaluated together with the current accepted tests of that category.
+* First priority is correctness and pytest validity against the provided source code.
+* Second priority is embodying a genuinely new rule in the requested category.
+* Third priority is simplicity.
+* Derive every expected result directly from the provided source code.
+* Do not infer intended behavior beyond what is directly supported by the current code.
+* If previous rejected attempts are shown, do not repeat them or make only cosmetic variations of them.
+* Prefer a different observable behavior, branch outcome, condition outcome, loop behavior, or execution path from the already accepted tests and rejected attempts.
+* Do not combine independent scenarios in the same test.
+* Do not write imports, markdown, explanations, placeholders, helper code, or more than one function.
+
+# Rule and reasoning
+
+* Return only two comment lines and nothing else.
+* The first line must be exactly in the form: `# Rule: <text>`
+* The second line must be exactly in the form: `# Reasoning: <text>`
+* The rule must be a general reusable testing rule written at the level of roles, relations, thresholds, boundaries, behaviors, or control-flow outcomes, not at the level of file-specific names or concrete values.
+* Generalize semantically, not mechanically: describe the kind of situation and the expected behavior, using abstractions such as negative value, zero value, threshold value, below threshold, above threshold, default path, override path, validation path, compound condition true, or compound condition false when appropriate.
+* The rule must fit the requested category: functional rules must describe observable behavior, while structural rules must describe execution structure such as branch outcomes, loop behavior, condition combinations, or distinct control-flow paths.
+* The rule must be genuinely distinct from the existing rules of that category and must not be only a narrower restatement, cosmetic paraphrase, or concrete specialization of an already accepted rule.
+* The rule must not contain concrete values, concrete strings, function names, variable names, class names, or other file-specific identifiers from the current script.
+* The reasoning must briefly explain why this accepted test adds useful coverage or a genuinely new rule to the category.
+* Do not return code, markdown, imports, explanations, or any extra text.

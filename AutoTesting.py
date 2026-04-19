@@ -1,1230 +1,979 @@
+from __future__ import annotations
+import hashlib
+
+"""
+AutoTesting.py
+
+Rol
+---
+Acest fisier este orchestratorul principal al framework-ului de generare
+automata de teste cu Ollama. El coordoneaza toate componentele extrase in
+module separate si ruleaza fluxul complet al aplicatiei.
+
+Flux general
+------------
+1. Verificare initiala a structurii proiectului
+2. Etapa 1:
+   - generarea testelor initiale pe baza bullet-urilor explicite din
+     fisierele testing_*.md
+3. Etapa 2:
+   - cautarea unor teste noi, dincolo de bullet-urile explicite, pentru
+     fiecare categorie
+4. Logarea regulilor acceptate
+5. Arhivarea artefactelor finale
+6. Afisarea regulilor adaugate in sesiunea curenta
+
+De ce ramane un fisier separat
+------------------------------
+Desi responsabilitatile tehnice au fost extrase in module dedicate, este in
+continuare nevoie de un loc unic care sa:
+- decida ordinea etapelor
+- gestioneze starile fluxului
+- coordoneze interactiunea dintre componente
+- aplice regulile de acceptare / respingere ale testelor propuse
+
+Prin urmare, AutoTesting.py ramane orchestratorul pur al sistemului.
+
+Observatii importante
+---------------------
+1. Acest fisier nu mai contine direct logica de:
+   - acces la fisiere
+   - parsare raspunsuri
+   - validare AST / pytest
+   - comunicare HTTP cu Ollama
+   - scorare prin pytest / coverage / mutmut
+   - arhivare
+
+2. Toate aceste responsabilitati au fost mutate in module separate, iar aici
+   sunt doar coordonate.
+
+3. Bugetul de timp pentru etapa 2 masoara doar timpul de generatie AI,
+   exact ca in implementarea initiala. Timpul de validare si scorare nu este
+   scazut din acel buget.
+
+4. Daca o propunere noua este acceptata in etapa 2, bugetul AI pentru categoria
+   respectiva este resetat.
+"""
+
 from pathlib import Path
-import json
-from datetime import datetime
-import subprocess
-import os
-import select
-import time
-import ast
-import re
+
+from Archive import ArchiveManager
+from Config import AppConfig
+from Logger import Logger
+from OllamaClient import OllamaClient
+from PromptBuilder import PromptBuilder
+from ResponseParser import ResponseParser
+from TestValidator import TestValidator
+from TestsPerformance import PerformanceScores, TestsPerformance
+from WorkspaceManager import WorkspaceManager
+from Cleanup import CleanupManager
 
 
 class AutoTesting:
     """
-    Clasa-orchestrator pentru generarea, validarea si selectiea automata
-    a testelor pytest pentru fisierul to_test.py.
+    Orchestratorul principal al framework-ului de generare automata de teste.
 
-    Flux general:
-    1. Verifica fisierele si structura minima necesara.
-    2. Creeaza fisierele test_*.py corespunzatoare categoriilor testing_*.md.
-    3. Porneste Aider + Ollama si scrie testele initiale deja enumerate in
-       fisierele testing_*.md.
-    4. Ruleaza o etapa de cautare a unor teste noi care imbunatatesc macar
-       unul dintre scorurile:
-           - pytest
-           - branch coverage
-           - cosmic-ray
-    5. Logheaza regulile noi pastrate.
-    6. Afiseaza regulile adaugate in sesiunea curenta.
-
-    Principiul de selectie este strict:
-    un test nou este pastrat doar daca imbunatateste cel putin un scor fata
-    de starea existenta a suitei de teste.
+    Responsabilitati:
+    - initializeaza toate componentele
+    - valideaza structura initiala a proiectului
+    - ruleaza etapa 1 si etapa 2
+    - decide acceptarea sau respingerea propunerilor
+    - logheaza regulile acceptate
+    - arhiveaza artefactele finale
     """
 
-    COMENTARIU_FINAL_TESTE_INITIALE = (
-        "# Sfarsitul implementarii testelor initiale existente."
-    )
-
-    def __init__(self):
-        # Calea absoluta catre acest fisier si folderul curent de lucru.
-        self.auto_testing_path = Path(__file__).resolve()
-        self.folder_curent = self.auto_testing_path.parent
-
-        # Mapare: nume fisier testing_*.md -> nume fisier test_*.py.
-        self.fisiere_testing = {}
-
-        # Lista ordonata a fisierelor testing_*.md.
-        self.fisiere_testing_md = []
-
-        # Timeout de referinta pentru interactiunea cu AI-ul.
-        self.timeout_sec = 200
-
-        # Numarul de reguli noi adaugate in sesiunea curenta.
-        self.numar_reguli_adaugate = 0
-
-        # Procesele externe controlate de clasa.
-        self.aider_process = None
-        self.ollama_process = None
-
-        # Intreg fluxul este orchestrat direct din constructor.
-        self._afiseaza_status("Checking initial conditions...")
-        self.verifica_conditii_initiale()
-        self._afiseaza_status("Starting initial test generation stage...")
-        self.scrie_teste_initiale()
-        self._afiseaza_status("Starting new test discovery stage...")
-        self.gaseste_teste_noi()
-        self._afiseaza_status("Archiving generated files...")
-        self.arhiveaza()
-        self._afiseaza_status("Displaying accepted new rules...")
-        self.afiseaza_reguli_adaugate()
-
-    # -------------------------------------------------------------------------
-    # Utilitare generale pentru fisiere si parsare de continut .md / text
-    # -------------------------------------------------------------------------
-
-    def _citeste_text(self, cale: Path) -> str:
-        """Citeste un fisier text folosind UTF-8."""
-        return cale.read_text(encoding="utf-8")
-
-    def _scrie_text(self, cale: Path, continut: str):
-        """Scrie un fisier text folosind UTF-8."""
-        cale.write_text(continut, encoding="utf-8")
-
-    def _linii(self, cale: Path) -> list[str]:
-        """Intoarce liniile unui fisier text."""
-        return self._citeste_text(cale).splitlines()
-
-    def _fisiere_testing_md(self) -> list[Path]:
-        """Intoarce toate fisierele testing_*.md din folderul curent."""
-        return sorted(self.folder_curent.glob("testing_*.md"))
-
-    def _fisier_test_pentru_md(self, fisier_md: Path) -> Path:
-        """
-        Construieste numele fisierului test_*.py asociat unui fisier
-        testing_*.md.
-        """
-        categorie = fisier_md.stem[len("testing_"):]
-        return self.folder_curent / f"test_{categorie}.py"
-
-    def _pozitii_headere_principale(self, cale_md: Path) -> list[int]:
-        """Intoarce pozitiile liniilor care incep cu '# '."""
-        return [i for i, linie in enumerate(self._linii(cale_md)) if linie.startswith("# ")]
-
-    def _extrage_sectiune_dupa_header(
+    def __init__(
         self,
-        cale_md: Path,
-        index_header: int,
-        pana_la_urmatorul_header: bool = True,
-    ) -> str:
+        debugging_enabled: bool = False,
+        print_debug: bool = True,
+    ) -> None:
         """
-        Extrage textul de dupa headerul cu indexul dat.
+        Initializeaza configurarea si toate componentele framework-ului.
 
-        Exemplu:
-        - index_header = 0 -> textul de dupa primul '# '
-        - index_header = 1 -> textul de dupa al doilea '# '
-
-        Daca pana_la_urmatorul_header este True, sectiunea se opreste la
-        urmatorul '# '. Daca este False, merge pana la finalul fisierului.
+        Parametri:
+        - debugging_enabled: activeaza logurile tehnice in fisiere
+        - print_debug: afiseaza mesajele de debug in terminal
         """
-        linii = self._linii(cale_md)
-        pozitii = self._pozitii_headere_principale(cale_md)
+        self.config = AppConfig(Path(__file__).resolve())
 
-        if index_header >= len(pozitii):
-            return ""
-
-        start = pozitii[index_header] + 1
-        end = len(linii)
-
-        if pana_la_urmatorul_header and index_header + 1 < len(pozitii):
-            end = pozitii[index_header + 1]
-
-        return "\n".join(linii[start:end]).strip()
-
-    def _extrage_reguli_generale_categorie(self, cale_md: Path) -> str:
-        """
-        Dintr-un fisier testing_*.md, extrage textul dintre primul '# ' si
-        prima regula numerotata de forma '1.'.
-        """
-        linii = self._linii(cale_md)
-        start = None
-        end = len(linii)
-
-        for i, linie in enumerate(linii):
-            if linie.startswith("# "):
-                start = i + 1
-                break
-
-        if start is None:
-            return ""
-
-        for i in range(start, len(linii)):
-            if re.match(r"^\d+\.", linii[i].strip()):
-                end = i
-                break
-
-        return "\n".join(linii[start:end]).strip()
-
-    def _extrage_tipuri_teste(self, cale_md: Path) -> list[str]:
-        """
-        Extrage toate regulile numerotate dintr-un fisier testing_*.md.
-        Intoarce doar textul de dupa numarul urmat de punct.
-        """
-        tipuri = []
-
-        for linie in self._linii(cale_md):
-            potrivire = re.match(r"^\d+\.\s*(.+)$", linie.strip())
-            if potrivire:
-                tipuri.append(potrivire.group(1).strip())
-
-        return tipuri
-
-    def _extrage_nume_functie_test(self, functie: str) -> str | None:
-        """Extrage numele functiei test_* din codul primit ca text."""
-        potrivire = re.search(r"def\s+(test_[A-Za-z0-9_]+)\s*\(", functie)
-        if potrivire:
-            return potrivire.group(1)
-        return None
-
-    def _extrage_regula_motivare(self, text: str) -> tuple[str, str]:
-        """
-        Extrage cele doua campuri cerute ulterior AI-ului:
-        - Rule / Regula
-        - Reasoning / Motivation / Motivare
-        """
-        linii = [linie.strip() for linie in text.splitlines() if linie.strip()]
-        regula = ""
-        motivare = ""
-
-        prefixe_regula = ("rule:", "regula:")
-        prefixe_motivare = ("reasoning:", "motivation:", "motivare:")
-
-        for i, linie in enumerate(linii):
-            lower = linie.lower()
-
-            if lower.startswith(prefixe_regula):
-                regula = linie.split(":", 1)[1].strip()
-                continue
-
-            if lower.startswith(prefixe_motivare):
-                motivare = linie.split(":", 1)[1].strip()
-
-                rest = [
-                    x for x in linii[i + 1:]
-                    if not x.lower().startswith(prefixe_regula + prefixe_motivare)
-                ]
-                if rest:
-                    motivare = (motivare + "\n" + "\n".join(rest)).strip()
-                break
-
-        if not regula and linii:
-            regula = linii[0]
-
-        if not motivare and len(linii) > 1:
-            motivare = "\n".join(linii[1:]).strip()
-
-        return regula, motivare
-
-    # -------------------------------------------------------------------------
-    # Utilitare pentru editarea fisierelor de test
-    # -------------------------------------------------------------------------
-
-    def _adauga_functie_in_fisier(self, cale_fisier: Path, functie: str):
-        """
-        Adauga o functie noua intr-un fisier test_*.py.
-
-        Daca fisierul contine deja comentariul final pentru testele initiale,
-        acesta este scos temporar, functia este adaugata, apoi comentariul este
-        repus la final.
-        """
-        continut_vechi = self._citeste_text(cale_fisier) if cale_fisier.exists() else ""
-        avea_comentariu_final = self.COMENTARIU_FINAL_TESTE_INITIALE in continut_vechi
-
-        continut_fara_final = continut_vechi.replace(
-            self.COMENTARIU_FINAL_TESTE_INITIALE, ""
-        ).rstrip()
-
-        continut_nou = continut_fara_final
-        if continut_nou:
-            continut_nou += "\n\n"
-
-        continut_nou += functie.strip() + "\n"
-
-        if avea_comentariu_final:
-            continut_nou = continut_nou.rstrip() + "\n\n"
-            continut_nou += self.COMENTARIU_FINAL_TESTE_INITIALE + "\n"
-
-        self._scrie_text(cale_fisier, continut_nou)
-
-    def _elimina_functie_din_fisier(self, cale_fisier: Path, nume_functie: str):
-        """
-        Sterge din fisier functia cu numele dat.
-
-        Expresia regulata cauta functia de la 'def test_...' pana la urmatoarea
-        functie de test, la comentariul final sau pana la sfarsitul fisierului.
-        """
-        if not cale_fisier.exists():
-            return
-
-        continut = self._citeste_text(cale_fisier)
-        pattern = (
-            rf"\n{{0,2}}def\s+{re.escape(nume_functie)}\s*\(.*?"
-            rf"(?=^\s*def\s+test_|^\s*#\s+Sfarsitul implementarii testelor initiale existente\.|\Z)"
+        self.logger = Logger(
+            config=self.config,
+            debugging_enabled=debugging_enabled,
+            print_debug=print_debug,
         )
-        continut_nou = re.sub(
-            pattern,
-            "\n",
-            continut,
-            flags=re.DOTALL | re.MULTILINE,
-        ).rstrip() + "\n"
-
-        self._scrie_text(cale_fisier, continut_nou)
-
-    def _adauga_comentariu_final_teste_initiale(self):
-        """
-        Marcheaza toate fisierele test_*.py ca avand terminata etapa de
-        introducere a testelor initiale.
-        """
-        for fisier_test_py in self.folder_curent.glob("test_*.py"):
-            continut = self._citeste_text(fisier_test_py) if fisier_test_py.exists() else ""
-
-            if self.COMENTARIU_FINAL_TESTE_INITIALE not in continut:
-                continut = continut.rstrip()
-                if continut:
-                    continut += "\n\n"
-                continut += self.COMENTARIU_FINAL_TESTE_INITIALE + "\n"
-                self._scrie_text(fisier_test_py, continut)
-
-    # -------------------------------------------------------------------------
-    # Utilitare pentru scoruri si selectie
-    # -------------------------------------------------------------------------
-
-    def _scoruri_curente(self) -> tuple[float, float, float]:
-        """Intoarce scorurile curente: pytest, coverage, cosmic-ray."""
-        return self._evalueaza_suita()
-
-    def _exista_imbunatatire(
-        self,
-        scoruri_inainte: tuple[float, float, float],
-        scoruri_dupa: tuple[float, float, float],
-    ) -> bool:
-        """
-        Intoarce True daca macar unul dintre scoruri a crescut.
-        """
-        return any(dupa > inainte for inainte, dupa in zip(scoruri_inainte, scoruri_dupa))
-
-    def _format_imbunatatire(
-        self,
-        scoruri_inainte: tuple[float, float, float],
-        scoruri_dupa: tuple[float, float, float],
-    ) -> str:
-        """
-        Formateaza clar diferentele de scor dintre starea anterioara si cea
-        ulterioara adaugarii unui test.
-        """
-        pytest_inainte, coverage_inainte, cosmic_inainte = scoruri_inainte
-        pytest_dupa, coverage_dupa, cosmic_dupa = scoruri_dupa
-
-        return (
-            f"Pytest: {pytest_inainte}% -> {pytest_dupa}%; "
-            f"Branch coverage: {coverage_inainte}% -> {coverage_dupa}%; "
-            f"Cosmic-ray: {cosmic_inainte}% -> {cosmic_dupa}%."
+        self.workspace = WorkspaceManager(
+            config=self.config,
+            logger=self.logger,
+        )
+        self.cleanup_manager = CleanupManager(
+            config=self.config,
+            logger=self.logger,
+            workspace=self.workspace,
+        )
+        self.response_parser = ResponseParser()
+        self.prompt_builder = PromptBuilder(
+            config=self.config,
+            workspace=self.workspace,
+            logger=self.logger,
+        )
+        self.ollama_client = OllamaClient(
+            config=self.config,
+            logger=self.logger,
+        )
+        self.validator = TestValidator(
+            config=self.config,
+            logger=self.logger,
+            workspace=self.workspace,
+            response_parser=self.response_parser,
+        )
+        self.tests_performance = TestsPerformance(
+            config=self.config,
+            logger=self.logger,
+            workspace=self.workspace,
+        )
+        self.archive_manager = ArchiveManager(
+            config=self.config,
+            logger=self.logger,
+            workspace=self.workspace,
         )
 
-    def _solicita_functie_valida(
-        self,
-        mesaj_initial: str,
-        deadline: float,
-        mesaj_retransmitere: str,
-    ) -> str | None:
+        # Starea curenta a fluxului.
+        self.state: int = self.config.states.TESTE_INITIALE
+
+        # Numarul de reguli noi acceptate in etapa 2.
+        self.numar_reguli_adaugate: int = 0
+
+        # Fisierele testing_*.md gasite in proiect.
+        self.fisiere_testing_md: list[Path] = []
+
+        # Mapare de forma:
+        # { "testing_structural.md": "test_structural.py", ... }
+        self.fisiere_testing: dict[str, str] = {}
+
+        # Istoric de incercari respinse pe categorie.
+        # Forma:
+        # {
+        #   "functional": [(function_code, rejection_reason), ...],
+        #   "structural": [(function_code, rejection_reason), ...],
+        # }
+        self.failed_attempts_by_category: dict[str, list[tuple[str, str]]] = {}
+
+        # Hash-urile propunerilor deja respinse in etapa 2, pentru a evita
+        # rescoring-ul repetat al aceleiasi functii.
+        # Forma:
+        # {
+        #   "functional": {"<sha256>", ...},
+        #   "structural": {"<sha256>", ...},
+        # }
+        self.rejected_hashes_by_category: dict[str, set[str]] = {}
+
+
+    # ------------------------------------------------------------------
+    # Initializare si verificari initiale
+    # ------------------------------------------------------------------
+
+    def verifica_conditii_initiale(self) -> None:
         """
-        Cere AI-ului o functie de test si continua sa o corecteze pana cand:
-        - validate() intoarce 'Valid'
-        - sau expira timpul alocat.
-
-        Intoarce functia valida ca text sau None daca nu s-a reusit.
+        Verifica structura initiala minima a proiectului si initializeaza
+        artefactele de lucru necesare.
         """
-        raspuns_ai = self.execute(mesaj_initial)
-        rezultat_validare = self.validate(raspuns_ai)
+        self.logger.console_step("verific existenta conditiilor de rulare")
+        self.workspace.validate_initial_project_structure()
 
-        while rezultat_validare != "Valid" and time.time() < deadline:
-            raspuns_ai = self.execute(
-                rezultat_validare + "\n" + mesaj_retransmitere
-            )
-            rezultat_validare = self.validate(raspuns_ai)
+        self.fisiere_testing_md = self.workspace.get_testing_md_files()
+        self.fisiere_testing = self.workspace.build_testing_file_mapping()
 
-        if rezultat_validare == "Valid":
-            return raspuns_ai
-
-        return None
-
-    def _afiseaza_status(self, mesaj: str):
-        """Afiseaza un mesaj scurt de progres pentru pasii principali ai fluxului."""
-        print(f"[AutoTesting] {mesaj}", flush=True)
-
-    def _rezuma_text(self, text: str, limita: int = 120) -> str:
-        """Compacteaza un text pentru afisare in logurile de progres."""
-        text = " ".join(text.split())
-        if len(text) <= limita:
-            return text
-        return text[:limita - 3] + "..."
-
-    def _evalueaza_suita(self) -> tuple[float, float, float]:
-        """
-        Evalueaza suita curenta de teste cu toate tool-urile folosite de aplicatie
-        si afiseaza progresul fiecarui pas major.
-        """
-        self._afiseaza_status("Running pytest...")
-        scor_pytest = self.test_pytest()
-
-        self._afiseaza_status("Running branch coverage...")
-        scor_coverage = self.test_coverage()
-
-        self._afiseaza_status("Running mutation testing with Cosmic Ray...")
-        scor_cosmic = self.test_cosmic_ray()
-
-        self._afiseaza_status(
-            f"Current scores -> pytest: {scor_pytest}%, coverage: {scor_coverage}%, cosmic-ray: {scor_cosmic}%"
-        )
-        return (scor_pytest, scor_coverage, scor_cosmic)
-
-    # -------------------------------------------------------------------------
-    # Verificari initiale si jurnalizare
-    # -------------------------------------------------------------------------
-
-    def verifica_conditii_initiale(self):
-        """
-        Verifica toate dependintele minime necesare si pregateste structura de
-        fisiere folosita ulterior de fluxul de testare.
-        """
-        fisier_de_testat = self.folder_curent / "to_test.py"
-        if not fisier_de_testat.exists():
-            raise FileNotFoundError(
-                "Nu exista fisierul to_test.py, continand functia / clasa de testat"
-            )
-
-        fisier_config = self.folder_curent / ".aider.conf.yml"
-        if not fisier_config.exists():
-            raise FileNotFoundError("Nu exista fisierul .aider.conf.yml.")
-
-        continut_config = self._citeste_text(fisier_config)
-        if "read:" not in continut_config or "to_test.py" not in continut_config:
-            raise ValueError(
-                "Fisierul .aider.conf.yml nu contine configurarea read pentru to_test.py."
-            )
-
-        fisier_rules = self.folder_curent / "Rules.md"
-        if not fisier_rules.exists():
-            raise FileNotFoundError("Nu exista fisierul Rules.md.")
-
-        continut_rules = self._linii(fisier_rules)
-        numar_headere = sum(1 for linie in continut_rules if linie.startswith("#"))
-        if numar_headere < 2:
-            raise ValueError(
-                "Fisierul Rules.md trebuie sa contina cel putin 2 randuri care incep cu #."
-            )
-
-        self.fisiere_testing_md = self._fisiere_testing_md()
-        if not self.fisiere_testing_md:
-            raise FileNotFoundError(
-                "Nu exista niciun fisier testing_*.md cu categorii de teste."
-            )
-
-        for fisier_md in self.fisiere_testing_md:
-            fisier_py = self._fisier_test_pentru_md(fisier_md)
-            self.fisiere_testing[fisier_md.name] = fisier_py.name
-            fisier_py.touch(exist_ok=True)
-
-        folder_arh = self.folder_curent / "arh"
-        folder_arh.mkdir(exist_ok=True)
-        self._afiseaza_status("Initial conditions are valid.")
-
-    def log(
-        self,
-        categorie: str,
-        regula: str,
-        motivare: str,
-        imbunatatire: str,
-        autor: str = "AI",
-    ):
-        """
-        Adauga o noua intrare in Logs.jsonl.
-
-        Fisierul este append-only. Numarul intrarii este calculat pornind de la
-        ultima intrare existenta.
-        """
-        fisier_log = self.folder_curent / "Logs.jsonl"
-        numar_intrare = 1
-
-        if fisier_log.exists() and fisier_log.stat().st_size > 0:
-            with fisier_log.open("r", encoding="utf-8") as f:
-                ultima_linie_valida = None
-                for linie in f:
-                    linie = linie.strip()
-                    if linie:
-                        ultima_linie_valida = linie
-
-            if ultima_linie_valida is not None:
-                ultima_intrare = json.loads(ultima_linie_valida)
-                numar_intrare = int(ultima_intrare["Numar intrare"]) + 1
-
-        intrare = {
-            "Numar intrare": numar_intrare,
-            "Categorie": categorie,
-            "Regula": regula,
-            "Motivare": motivare,
-            "Imbunatatire": imbunatatire,
-            "Data": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "Autor": autor,
-        }
-
-        with fisier_log.open("a", encoding="utf-8") as f:
-            f.write(json.dumps(intrare, ensure_ascii=False) + "\n")
-
-    def arhiveaza(self):
-        self._afiseaza_status("Archiving to_test.py and all test_*.py files...")
-        """
-        Muta fisierul to_test.py si toate fisierele test_*.py intr-un nou
-        subfolder numeric din /arh.
-        """
-        folder_arh = self.folder_curent / "arh"
-        subfoldere = [x for x in folder_arh.iterdir() if x.is_dir()]
-
-        numere_existente = []
-        for subfolder in subfoldere:
-            try:
-                numar = int(subfolder.name.split(" ", 1)[0])
-                numere_existente.append(numar)
-            except (ValueError, IndexError):
-                continue
-
-        urmatorul_numar = max(numere_existente, default=0) + 1
-        data_curenta = datetime.now().strftime("%d.%m.%Y %H:%M")
-        folder_nou = folder_arh / f"{urmatorul_numar} {data_curenta}"
-        folder_nou.mkdir()
-
-        fisier_to_test = self.folder_curent / "to_test.py"
-        if fisier_to_test.exists():
-            fisier_to_test.rename(folder_nou / fisier_to_test.name)
-
-        for fisier_test in self.folder_curent.glob("test_*.py"):
-            if fisier_test.is_file():
-                fisier_test.rename(folder_nou / fisier_test.name)
-
-    def afiseaza_reguli_adaugate(self):
-        """
-        Afiseaza regulile noi adaugate in sesiunea curenta pe baza valorii
-        self.numar_reguli_adaugate.
-        """
-        if self.numar_reguli_adaugate == 0:
-            print(
-                "Nu au fost identificate teste noi fata de tipurile deja existente in library-ul framework-ului de testare."
-            )
-            return
-
-        fisier_log = self.folder_curent / "Logs.jsonl"
-        if not fisier_log.exists() or fisier_log.stat().st_size == 0:
-            print(f"Numar reguli adaugate: {self.numar_reguli_adaugate}")
-            print("Logs.jsonl nu exista sau este gol.")
-            return
-
-        intrari = []
-        with fisier_log.open("r", encoding="utf-8") as f:
-            for linie in f:
-                linie = linie.strip()
-                if linie:
-                    intrari.append(json.loads(linie))
-
-        ultimele_intrari = intrari[-self.numar_reguli_adaugate:]
-
-        print(f"Numar reguli adaugate: {self.numar_reguli_adaugate}")
-        for intrare in ultimele_intrari:
-            print(json.dumps(intrare, ensure_ascii=False, indent=2))
-
-    # -------------------------------------------------------------------------
-    # Interfata cu terminalul, Aider si Ollama
-    # -------------------------------------------------------------------------
-
-    def _ruleaza_comanda(
-        self,
-        comanda: str,
-        timeout: int | None = None,
-    ) -> subprocess.CompletedProcess:
-        """
-        Ruleaza o comanda shell in folderul curent si intoarce obiectul complet
-        subprocess.CompletedProcess. Aceasta metoda este folosita intern acolo
-        unde este nevoie si de codul de iesire.
-        """
-        return subprocess.run(
-            comanda,
-            shell=True,
-            cwd=self.folder_curent,
-            capture_output=True,
-            text=True,
-            timeout=timeout,
+        self.logger.debug(
+            f"Conditiile initiale sunt valide. Model Ollama: {self.config.ollama.model}"
         )
 
-    def terminal(self, comanda: str):
+
+    # ------------------------------------------------------------------
+    # Helpers pentru scoruri
+    # ------------------------------------------------------------------
+
+    def get_current_scores(
+        self,
+        selected_test_files: list[str] | None = None,
+    ) -> PerformanceScores:
         """
-        Ruleaza o comanda shell si intoarce exact textul care s-ar vedea in
-        terminal: stdout + stderr.
+        Returneaza scorurile curente ale suitei de teste pentru fisierele selectate.
         """
-        rezultat = self._ruleaza_comanda(comanda)
-        return rezultat.stdout + rezultat.stderr
+        return self.tests_performance.get_current_scores(selected_test_files)
 
-    def _citeste_pana_la_prompt(self):
+
+    def format_scores_for_debug(self, scores: PerformanceScores) -> str:
         """
-        Citeste iesirea procesului Aider pana cand:
-        - apare promptul interactiv recunoscut
-        - sau expira timeout-ul de citire
-
-        In plus, afiseaza brut ce primeste de la Aider, pentru debugging.
+        Formateaza scorurile pentru afisare in debug.
         """
-        iesire = ""
-        start = time.time()
+        return self.tests_performance.format_scores_for_debug(scores)
 
-        print("[AutoTesting] Waiting for Aider output...")
+    # ------------------------------------------------------------------
+    # Solicitarea unei functii valide catre model
+    # ------------------------------------------------------------------
 
-        while time.time() - start < self.timeout_sec:
-            if self.aider_process is None or self.aider_process.stdout is None:
-                print("[AutoTesting] Aider stdout is not available.")
-                break
+    def solicita_functie_valida(
+        self,
+        testing_md_path: Path,
+        bullet_index: int | None = None,
+        remaining_ai_budget_sec: float | None = None,
+        failed_attempts: list[tuple[str, str]] | None = None,
+    ) -> tuple[str | None, float]:
+        """
+        Solicita modelului o functie valida si, daca este necesar, cere
+        corectarea ei de mai multe ori.
 
-            gata, _, _ = select.select([self.aider_process.stdout], [], [], 0.2)
+        Returneaza:
+        - function_code valid sau None
+        - timpul total consumat de AI pentru aceasta secventa de generare
 
-            if not gata:
-                continue
+        Noua logica:
+        - in etapa 2, promptul primeste si incercarile deja respinse
+        - la fiecare invalidare, functia respinsa si motivul concret sunt memorate
+        pentru categoria curenta
+        - motivul concret de validare esuata este logat clar in debug
+        """
+        current_function_code = ""
+        current_validation_error = ""
+        ai_time_spent = 0.0
+        empty_answers_count = 0
+        category = self.workspace.get_category_name_from_testing_md(testing_md_path)
+        is_new_tests_stage = bullet_index is None
 
-            bucata_bytes = os.read(self.aider_process.stdout.fileno(), 4096)
-            if not bucata_bytes:
-                print("[AutoTesting] Aider produced no more output.")
-                break
+        if bullet_index is not None:
+            self.state = self.config.states.TESTE_INITIALE
+        else:
+            self.state = self.config.states.TESTE_NOI
 
-            bucata = bucata_bytes.decode("utf-8", errors="replace")
-            iesire += bucata
+        prompt = self.prompt_builder.build_prompt(
+            state=self.state,
+            testing_md_path=testing_md_path,
+            bullet_index=bullet_index,
+            failed_attempts=failed_attempts if is_new_tests_stage else None,
+        )
 
-            print("[AutoTesting] Aider raw chunk:")
-            print(repr(bucata))
+        max_total_attempts = self.config.timeouts.max_corectie_attempts + 1
 
-            # Prompturi posibile pe care le putem considera "ready"
+        for attempt_index in range(1, max_total_attempts + 1):
             if (
-                "\n> " in iesire
-                or iesire.endswith("> ")
-                or "\n>>> " in iesire
-                or iesire.endswith(">>> ")
+                remaining_ai_budget_sec is not None
+                and ai_time_spent >= remaining_ai_budget_sec
             ):
-                print("[AutoTesting] Aider prompt detected.")
-                return iesire
-
-        print("[AutoTesting] Timeout while waiting for Aider prompt/output.")
-        print("[AutoTesting] Aider accumulated output:")
-        print(repr(iesire))
-
-        return iesire
-
-
-    def start_ai(self):
-        """
-        Porneste Ollama si Aider daca nu sunt deja active.
-
-        Se porneste mai intai Ollama, apoi Aider. Dupa pornirea lui Aider se
-        consuma promptul initial ca sa poata primi imediat comenzi.
-        """
-        if self.ollama_process is None or self.ollama_process.poll() is not None:
-            self._afiseaza_status("Starting Ollama...")
-            self.ollama_process = subprocess.Popen(
-                ["ollama", "serve"],
-                cwd=self.folder_curent,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
-            time.sleep(2)
-
-        if self.aider_process is None or self.aider_process.poll() is not None:
-            self._afiseaza_status("Starting Aider...")
-            self.aider_process = subprocess.Popen(
-                ["aider", "--no-gitignore"],
-                cwd=self.folder_curent,
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                text=False,
-                bufsize=0,
-            )
-            self._afiseaza_status("Aider started. Waiting for the initial prompt...")
-            startup_output = self._citeste_pana_la_prompt()
-            if self.aider_process.poll() is not None:
-                self._afiseaza_status(
-                    f"Aider exited during startup with code {self.aider_process.returncode}. Output summary: {self._rezuma_text(startup_output)}"
+                self.logger.ai(
+                    "limita de timp a expirat inainte de obtinerea unei functii valide."
                 )
-            elif not startup_output.strip():
-                self._afiseaza_status("Aider startup produced no visible output before returning control.")
+                return None, ai_time_spent
 
-    def reset_context(self):
-        """
-        Reseteaza contextul AI-ului prin inchiderea procesului Aider si
-        repornirea lui. Ollama ramane pornit.
-        """
-        self._afiseaza_status("Stopping AI tools...")
-        if self.aider_process is not None and self.aider_process.poll() is None:
-            self.aider_process.terminate()
-            try:
-                self.aider_process.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                self.aider_process.kill()
-                self.aider_process.wait()
+            ollama_response = self.ollama_client.generate(prompt)
+            ai_time_spent += ollama_response.duration_sec
 
-        self._afiseaza_status("Resetting AI context...")
-        self.aider_process = None
-        self.start_ai()
+            validation_result = self.validator.validate_response_text(
+                ollama_response.text
+            )
+            parsed_response = validation_result.parsed_response
+            current_function_code = parsed_response.function_code
 
-    def execute(self, comanda: str):
-        """
-        Trimite o comanda catre Aider-ul persistent si intoarce raspunsul brut
-        citit pana la urmatorul prompt.
+            if validation_result.is_valid:
+                return current_function_code, ai_time_spent
 
-        In plus, afiseaza comanda trimisa si raspunsul primit, pentru debugging.
-        """
-        if self.aider_process is None or self.aider_process.poll() is not None:
-            raise RuntimeError("Aider is not running.")
+            if not (ollama_response.text or "").strip():
+                empty_answers_count += 1
+            elif not current_function_code.strip():
+                empty_answers_count += 1
+            else:
+                empty_answers_count = 0
 
-        if self.aider_process.stdin is None:
-            raise RuntimeError("Aider stdin is not available.")
-
-        print("[AutoTesting] Sending command to Aider:")
-        print(comanda)
-        print("[AutoTesting] End of command sent to Aider.")
-
-        self.aider_process.stdin.write((comanda + "\n").encode("utf-8"))
-        self.aider_process.stdin.flush()
-
-        raspuns = self._citeste_pana_la_prompt()
-
-        print("[AutoTesting] Aider full response:")
-        print(raspuns)
-        print("[AutoTesting] End of Aider response.")
-
-        return raspuns
-
-    def stop_ai(self):
-        """
-        Opreste complet Aider si Ollama.
-        """
-        if self.aider_process is not None and self.aider_process.poll() is None:
-            self.aider_process.terminate()
-            try:
-                self.aider_process.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                self.aider_process.kill()
-                self.aider_process.wait()
-        self.aider_process = None
-
-        if self.ollama_process is not None and self.ollama_process.poll() is None:
-            self.ollama_process.terminate()
-            try:
-                self.ollama_process.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                self.ollama_process.kill()
-                self.ollama_process.wait()
-        self.ollama_process = None
-
-    # -------------------------------------------------------------------------
-    # Validare tehnica a unui test furnizat de AI
-    # -------------------------------------------------------------------------
-
-    def validate(self, functie: str):
-        self._afiseaza_status("Validating the proposed test function...")
-        """
-        Verifica daca textul primit reprezinta strict o singura functie test_*
-        valida din punct de vedere sintactic si executabila de pytest.
-
-        Intoarce:
-        - "Valid" daca testul este tehnic valid
-        - mesajul brut de eroare in caz contrar
-        """
-        try:
-            arbore = ast.parse(functie)
-        except SyntaxError as eroare:
-            return f"SyntaxError: {eroare}"
-
-        functii_test = [
-            nod for nod in arbore.body
-            if isinstance(nod, ast.FunctionDef) and nod.name.startswith("test_")
-        ]
-
-        if len(functii_test) == 0:
-            return (
-                "The provided text does not contain any test function whose name starts with test_."
+            self.logger.debug(
+                f"Validare esuata pentru categoria {category}: {validation_result.message}"
             )
 
-        if len(functii_test) > 1:
-            return (
-                "The provided text contains multiple test functions. Only one test_* function is allowed."
-            )
+            if is_new_tests_stage:
+                function_or_answer_to_remember = (
+                    current_function_code.strip()
+                    or parsed_response.cleaned_text.strip()
+                    or (ollama_response.text or "").strip()
+                    or "# Empty or unusable previous answer"
+                )
+                self.remember_failed_attempt(
+                    category=category,
+                    function_code=function_or_answer_to_remember,
+                    rejection_reason=validation_result.message,
+                )
 
-        if len(arbore.body) != 1 or not isinstance(arbore.body[0], ast.FunctionDef):
-            return (
-                "The provided text must contain exactly one test function and no additional code."
-            )
-
-        nume_functie = functii_test[0].name
-        fisier_temp = self.folder_curent / "__validate_temp__.py"
-
-        try:
-            self._scrie_text(fisier_temp, functie.strip() + "\n")
-
-            rezultat = self._ruleaza_comanda(
-                f'python3 -m pytest -q "{fisier_temp.name}::{nume_functie}" --maxfail=1',
-                timeout=self.timeout_sec,
-            )
-            iesire = rezultat.stdout + rezultat.stderr
-
-            if rezultat.returncode in (0, 1):
-                return "Valid"
-
-            return iesire.strip() or f"Pytest validation failed with exit code {rezultat.returncode}."
-
-        except subprocess.TimeoutExpired:
-            return f"TimeoutError: the test did not finish within {self.timeout_sec} seconds."
-
-        finally:
-            if fisier_temp.exists():
-                fisier_temp.unlink()
-
-    # -------------------------------------------------------------------------
-    # Metrici de evaluare a suitei de teste
-    # -------------------------------------------------------------------------
-
-    def test_pytest(self):
-        """
-        Ruleaza toate testele din fisierele test_*.py si intoarce procentul de
-        teste PASSED raportat la totalul rezultatelor relevante raportate de
-        pytest.
-        """
-        rezultat = self.terminal("python3 -m pytest -q test_*.py")
-
-        if "no tests ran" in rezultat.lower():
-            return 0.0
-
-        linie_rezumat = None
-        for linie in reversed(rezultat.splitlines()):
-            if any(
-                cuvant in linie
-                for cuvant in [
-                    "passed",
-                    "failed",
-                    "error",
-                    "errors",
-                    "skipped",
-                    "xfailed",
-                    "xpassed",
-                ]
+            if (
+                empty_answers_count
+                > self.config.timeouts.max_empty_answers_consecutive
             ):
-                linie_rezumat = linie.strip()
-                break
+                self.logger.ai(
+                    "prea multe raspunsuri goale sau inutilizabile de la Ollama."
+                )
+                return None, ai_time_spent
 
-        if linie_rezumat is None:
-            return 0.0
+            if self.validator.is_timeout_error(validation_result.message):
+                self.logger.ai(
+                    "a aparut un timeout la validare. Propunerea este respinsa."
+                )
+                return None, ai_time_spent
 
-        valori = {
-            "passed": 0,
-            "failed": 0,
-            "error": 0,
-            "errors": 0,
-            "skipped": 0,
-            "xfailed": 0,
-            "xpassed": 0,
-        }
+            if attempt_index >= max_total_attempts:
+                self.logger.ai(
+                    "a fost atins numarul maxim de tentative de corectie."
+                )
+                return None, ai_time_spent
 
-        for cheie in valori:
-            potrivire = re.search(rf"(\d+)\s+{cheie}\b", linie_rezumat)
-            if potrivire:
-                valori[cheie] = int(potrivire.group(1))
+            self.logger.ai("validez functia propusa si cer o corectie...")
+            self.state = self.config.states.CORECTEAZA_PROPUNERE
+            current_validation_error = validation_result.message
 
-        numar_teste = sum(valori.values())
-        if numar_teste == 0:
-            return 0.0
+            prompt = self.prompt_builder.build_prompt(
+                state=self.state,
+                testing_md_path=testing_md_path,
+                bullet_index=bullet_index,
+                proposed_function=(
+                    current_function_code
+                    or parsed_response.cleaned_text
+                    or (ollama_response.text or "")
+                ),
+                validation_error=current_validation_error,
+            )
 
-        return round(valori["passed"] * 100 / numar_teste, 2)
+            self.ollama_client.reset_context()
 
-    def test_coverage(self):
+        return None, ai_time_spent
+
+
+    # ------------------------------------------------------------------
+    # Etapa 1 - teste initiale
+    # ------------------------------------------------------------------
+
+    def scrie_teste_initiale(self) -> None:
         """
-        Ruleaza coverage cu --branch peste toate testele si extrage procentul de
-        coverage pentru to_test.py.
+        Etapa 1: genereaza testele initiale pe baza bullet-urilor explicite
+        din fiecare fisier testing_*.md.
+
+        In aceasta etapa:
+        - orice functie valida este acceptata automat
+        - nu se verifica imbunatatirea scorurilor
+
+        Ajustare importanta:
+        - contextul AI este resetat o singura data la finalul fiecarei categorii,
+        pentru a evita aglomerarea terminalului cu mesaje repetitive
         """
-        self.terminal("python3 -m coverage erase")
-        self.terminal("python3 -m coverage run --branch -m pytest -q test_*.py")
-        rezultat_raport = self.terminal(
-            'python3 -m coverage report -m --include="to_test.py"'
-        )
-
-        if "No data to report" in rezultat_raport:
-            return 0.0
-
-        linie_total = None
-        for linie in rezultat_raport.splitlines():
-            linie_strip = linie.strip()
-            if linie_strip.startswith("TOTAL"):
-                linie_total = linie_strip
-                break
-
-        if linie_total is None:
-            for linie in rezultat_raport.splitlines():
-                linie_strip = linie.strip()
-                if linie_strip.startswith("to_test.py"):
-                    linie_total = linie_strip
-                    break
-
-        if linie_total is None:
-            return 0.0
-
-        potrivire = re.search(r"(\d+%)\s*$", linie_total)
-        if potrivire is None:
-            return 0.0
-
-        return float(potrivire.group(1).replace("%", ""))
-
-    def test_cosmic_ray(self):
-        """
-        Ruleaza Cosmic Ray pe toata suita de teste si intoarce procentul de
-        mutanti omorati.
-
-        Formula folosita:
-            scor = 100 - procent_supravietuitori
-        """
-        fisier_config = self.folder_curent / "__cosmic_ray__.toml"
-        fisier_sesiune = self.folder_curent / "__cosmic_ray__.sqlite"
-        fisier_baseline = self.folder_curent / "__cosmic_ray__.baseline.sqlite"
-
-        for fisier in (fisier_config, fisier_sesiune, fisier_baseline):
-            if fisier.exists():
-                fisier.unlink()
-
-        continut_config = (
-            '[cosmic-ray]\n'
-            'module-path = "to_test.py"\n'
-            f'timeout = {self.timeout_sec}\n'
-            'excluded-modules = []\n'
-            'test-command = "python3 -m pytest -q test_*.py"\n\n'
-            '[cosmic-ray.distributor]\n'
-            'name = "local"\n'
-        )
+        self.logger.section("Etapa 1:")
+        self.logger.console_step("generez testele initiale")
 
         try:
-            self._scrie_text(fisier_config, continut_config)
-
-            self._afiseaza_status("Cosmic Ray: writing temporary configuration file...")
-            self._afiseaza_status("Cosmic Ray: preparing mutation session...")
-            rezultat_init = self._ruleaza_comanda(
-                f'cosmic-ray init "{fisier_config.name}" "{fisier_sesiune.name}"'
-            )
-            self._afiseaza_status(
-                f"Cosmic Ray: init finished with return code {rezultat_init.returncode}."
-            )
-            if rezultat_init.returncode != 0:
-                self._afiseaza_status(
-                    f"Cosmic Ray init error: {self._rezuma_text(rezultat_init.stdout + rezultat_init.stderr)}"
+            for testing_md_path in self.fisiere_testing_md:
+                category = self.workspace.get_category_name_from_testing_md(
+                    testing_md_path
                 )
-                return 0.0
+                self.logger.console_step(f"procesez categoria {category}")
 
-            self._afiseaza_status("Cosmic Ray: running baseline tests...")
-            rezultat_baseline = self._ruleaza_comanda(
-                f'cosmic-ray baseline --session-file "{fisier_baseline.name}" "{fisier_config.name}"'
-            )
-            self._afiseaza_status(
-                f"Cosmic Ray: baseline finished with return code {rezultat_baseline.returncode}."
-            )
-            if rezultat_baseline.returncode != 0:
-                self._afiseaza_status(
-                    f"Cosmic Ray baseline error: {self._rezuma_text(rezultat_baseline.stdout + rezultat_baseline.stderr)}"
+                bullets = self.workspace.extract_testing_rule_bullets(
+                    testing_md_path
                 )
-                return 0.0
+                if not bullets:
+                    continue
 
-            self._afiseaza_status("Cosmic Ray: testing mutants. This can take a long time...")
-            rezultat_exec = self._ruleaza_comanda(
-                f'cosmic-ray exec "{fisier_config.name}" "{fisier_sesiune.name}"'
-            )
-            self._afiseaza_status(
-                f"Cosmic Ray: mutant execution finished with return code {rezultat_exec.returncode}."
-            )
-            if rezultat_exec.returncode != 0:
-                self._afiseaza_status(
-                    f"Cosmic Ray exec error: {self._rezuma_text(rezultat_exec.stdout + rezultat_exec.stderr)}"
+                category_test_file = self.workspace.map_testing_md_to_test_py(
+                    testing_md_path
                 )
-                return 0.0
 
-            self._afiseaza_status("Reading Cosmic Ray report...")
-            rezultat_raport = self.terminal(f'cr-report "{fisier_sesiune.name}"')
-
-            potrivire_supravietuitori = re.search(
-                r"surviving mutants:\s*(\d+)\s*\(([\d.]+)%\)",
-                rezultat_raport,
-                flags=re.IGNORECASE,
-            )
-            if potrivire_supravietuitori:
-                procent_supravietuitori = float(potrivire_supravietuitori.group(2))
-                return round(100.0 - procent_supravietuitori, 2)
-
-            potrivire_total = re.search(
-                r"total jobs:\s*(\d+)",
-                rezultat_raport,
-                flags=re.IGNORECASE,
-            )
-            potrivire_supravietuitori_nr = re.search(
-                r"surviving mutants:\s*(\d+)",
-                rezultat_raport,
-                flags=re.IGNORECASE,
-            )
-
-            if potrivire_total and potrivire_supravietuitori_nr:
-                total = int(potrivire_total.group(1))
-                supravietuitori = int(potrivire_supravietuitori_nr.group(1))
-
-                if total == 0:
-                    return 0.0
-
-                return round((total - supravietuitori) * 100 / total, 2)
-
-            return 0.0
-
-        finally:
-            for fisier in (fisier_config, fisier_sesiune, fisier_baseline):
-                if fisier.exists():
-                    fisier.unlink()
-
-    # -------------------------------------------------------------------------
-    # Etapa 1: scrierea testelor initiale deja descrise in fisierele testing_*.md
-    # -------------------------------------------------------------------------
-
-    def scrie_teste_initiale(self):
-        """
-        Parcurge toate categoriile si toate tipurile de teste deja enumerate in
-        fisierele testing_*.md.
-
-        Pentru fiecare regula numerotata:
-        - cere AI-ului o functie de test
-        - o valideaza tehnic
-        - o adauga temporar in fisierul categoriei
-        - o pastreaza doar daca imbunatateste macar un scor
-        """
-        instructiuni_generale = self._extrage_sectiune_dupa_header(
-            self.folder_curent / "Rules.md",
-            index_header=0,
-            pana_la_urmatorul_header=True,
-        )
-
-        self.start_ai()
-
-        try:
-            for index_categorie, fisier_md in enumerate(self.fisiere_testing_md):
-                self._afiseaza_status(f"Initial stage: processing category {fisier_md.stem[len('testing_'):] }...")
-                reguli_generale_categorie = self._extrage_reguli_generale_categorie(
-                    fisier_md
-                )
-                tipuri_teste = self._extrage_tipuri_teste(fisier_md)
-                fisier_test_py = self._fisier_test_pentru_md(fisier_md)
-
-                # Pentru context curat, la trecerea la o noua categorie
-                # repornim doar Aider.
-                if index_categorie > 0:
-                    self.reset_context()
-
-                for tip_test in tipuri_teste:
-                    self._afiseaza_status(f"AI is asked to propose an initial test for rule: {tip_test}")
-                    deadline = time.time() + self.timeout_sec
-                    mesaj_initial = "\n".join(
-                        [instructiuni_generale, reguli_generale_categorie, tip_test]
-                    ).strip()
-
-                    self._afiseaza_status("AI is asked to propose a new test...")
-                    functie_valida = self._solicita_functie_valida(
-                        mesaj_initial=mesaj_initial,
-                        deadline=deadline,
-                        mesaj_retransmitere=(
-                            "Resend the corrected function and nothing else."
-                        ),
+                for bullet_index, bullet_text in enumerate(bullets):
+                    self.logger.debug(
+                        f"AI genereaza un test initial pentru regula: {bullet_text}"
                     )
 
-                    if functie_valida is None:
-                        self._afiseaza_status("The proposed test could not be validated in time. Moving to the next rule.")
+                    valid_function, _ = self.solicita_functie_valida(
+                        testing_md_path=testing_md_path,
+                        bullet_index=bullet_index,
+                    )
+
+                    if not valid_function:
+                        self.logger.debug(
+                            "Propunerea initiala nu a putut fi validata. Sar peste acest bullet."
+                        )
+                        self.workspace.clear_proposal_test_file()
                         continue
 
-                    self._afiseaza_status("AI proposed a new test. Evaluating the current suite before adding it...")
-                    scoruri_inainte = self._scoruri_curente()
-                    self._afiseaza_status(f"Adding proposed test to {fisier_test_py.name}...")
-                    self._adauga_functie_in_fisier(fisier_test_py, functie_valida)
-                    self._afiseaza_status("Evaluating the suite after adding the proposed test...")
-                    scoruri_dupa = self._scoruri_curente()
-
-                    if self._exista_imbunatatire(scoruri_inainte, scoruri_dupa):
-                        self._afiseaza_status("The proposed initial test was accepted.")
+                    function_name = self.response_parser.extract_function_name(
+                        valid_function
+                    )
+                    if self.workspace.function_exists_in_file(
+                        file_path=category_test_file,
+                        function_name=function_name,
+                    ):
+                        self.logger.debug(
+                            f"Propunerea initiala este ignorata deoarece functia {function_name} exista deja."
+                        )
+                        self.workspace.clear_proposal_test_file()
                         continue
 
-                    nume_functie = self._extrage_nume_functie_test(functie_valida)
-                    if nume_functie is not None:
-                        self._afiseaza_status("The proposed initial test was rejected. Removing it from the file...")
-                        self._elimina_functie_din_fisier(fisier_test_py, nume_functie)
+                    self.logger.debug("Propunerea initiala a fost acceptata.")
+                    self.workspace.append_function_to_test_file(
+                        test_file_path=category_test_file,
+                        function_code=valid_function,
+                    )
+                    self.workspace.clear_proposal_test_file()
 
-            self._adauga_comentariu_final_teste_initiale()
+                self.ollama_client.reset_context()
+
+            self.workspace.add_final_comment_to_initial_test_files()
 
         finally:
-            self.stop_ai()
+            self.ollama_client.stop()
 
-    # -------------------------------------------------------------------------
-    # Etapa 2: cautarea de teste noi care nu sunt deja enumerate explicit
-    # -------------------------------------------------------------------------
 
-    def gaseste_teste_noi(self):
+    # ------------------------------------------------------------------
+    # Etapa 2 - cautarea de teste noi
+    # ------------------------------------------------------------------
+
+    def gaseste_teste_noi(self) -> None:
         """
-        Pentru fiecare categorie:
-        - porneste de la scorurile actuale
-        - cere AI-ului teste noi care sa imbunatateasca suita existenta
-        - valideaza tehnic fiecare test
-        - pastreaza doar testele care cresc macar un scor
-        - logheaza regulile noi pastrate
-        - reseteaza contextul AI dupa fiecare succes
-        - continua pana cand expira timpul categoriei
-        """
-        reguli_extinse = self._extrage_sectiune_dupa_header(
-            self.folder_curent / "Rules.md",
-            index_header=1,
-            pana_la_urmatorul_header=False,
-        )
+        Etapa 2: cauta teste noi pentru fiecare categorie.
 
-        self.start_ai()
+        Reguli:
+        - se masoara doar timpul de generatie AI
+        - evaluarea se face pe: testele categoriei + test_propunere.py
+        - daca o propunere valida imbunatateste categoria, este acceptata
+        - daca o propunere este acceptata, bugetul AI pe categorie se reseteaza
+        - daca se acumuleaza 20 de iteratii consecutive fara imbunatatire,
+        cautarea se opreste pentru categoria curenta
+        - aceeasi functie deja respinsa nu mai este rescored
+        """
+        self.logger.section("Etapa 2:")
+        self.logger.console_step("caut teste noi care imbunatatesc performanta")
 
         try:
-            for fisier_md in self.fisiere_testing_md:
-                categorie = fisier_md.stem[len("testing_"):]
-                self._afiseaza_status(f"New test discovery stage: processing category {categorie}...")
-                fisier_test_py = self._fisier_test_pentru_md(fisier_md)
-                deadline_categorie = time.time() + 10 * self.timeout_sec
+            for testing_md_path in self.fisiere_testing_md:
+                category = self.workspace.get_category_name_from_testing_md(
+                    testing_md_path
+                )
+                self.logger.console_step(f"procesez categoria {category}")
 
-                while True:
-                    if time.time() >= deadline_categorie:
-                        self.reset_context()
-                        break
+                category_test_file = self.workspace.map_testing_md_to_test_py(
+                    testing_md_path
+                )
+                category_selected_test_files = [category_test_file.name]
 
-                    scoruri_inainte = self._scoruri_curente()
+                ai_budget_ramas = float(
+                    self.config.timeouts.timeout_categorie_ai_sec
+                )
 
-                    parti_mesaj = []
-                    if reguli_extinse:
-                        parti_mesaj.append(reguli_extinse)
+                max_iterations_without_improvement = 20
+                iterations_without_improvement = 0
 
-                    for fisier_categorie in self.fisiere_testing_md:
-                        continut = self._citeste_text(fisier_categorie).strip()
-                        if continut:
-                            parti_mesaj.append(continut)
-
-                    parti_mesaj.append(
-                        f"Current target category: {categorie}\n"
-                        "Write exactly one new pytest test function for this category only.\n"
-                        "It must improve the existing test suite for to_test.py.\n"
-                        "Return only the Python function and nothing else."
+                while ai_budget_ramas > 0:
+                    self.logger.debug(
+                        f"Buget AI ramas pentru {category}: {round(ai_budget_ramas, 2)}s"
+                    )
+                    self.logger.debug(
+                        f"Iteratii consecutive fara imbunatatire pentru {category}: "
+                        f"{iterations_without_improvement}/{max_iterations_without_improvement}"
                     )
 
-                    mesaj_initial = "\n".join(parti_mesaj).strip()
+                    if iterations_without_improvement >= max_iterations_without_improvement:
+                        self.logger.warning(
+                            f"Categoria {category} este oprita deoarece au fost atinse "
+                            f"{max_iterations_without_improvement} iteratii consecutive "
+                            f"fara nicio imbunatatire."
+                        )
+                        break
 
-                    functie_valida = self._solicita_functie_valida(
-                        mesaj_initial=mesaj_initial,
-                        deadline=deadline_categorie,
-                        mesaj_retransmitere=(
-                            "Resend only the corrected function and nothing else."
-                        ),
+                    before_scores = self.get_current_scores(category_selected_test_files)
+                    category_has_tests = self.tests_performance.has_any_tests(
+                        category_selected_test_files
                     )
 
-                    if functie_valida is None:
-                        self._afiseaza_status("No valid proposal was obtained in time for this category.")
-                        self.reset_context()
+                    if (
+                        category_has_tests
+                        and not self.tests_performance.is_pytest_clean(before_scores)
+                    ):
+                        self.logger.warning(
+                            f"Categoria {category} nu poate continua deoarece suita curenta nu este curata la pytest."
+                        )
                         break
 
-                    nume_functie = self._extrage_nume_functie_test(functie_valida)
-                    if nume_functie is None:
-                        self.reset_context()
-                        break
+                    self.logger.debug(
+                        f"Scoruri curente pentru categoria {category} ({category_test_file.name}) -> "
+                        f"{self.format_scores_for_debug(before_scores)}"
+                    )
 
-                    self._afiseaza_status("AI proposed a new test. Evaluating the current suite before and after adding it...")
-                    self._adauga_functie_in_fisier(fisier_test_py, functie_valida)
-                    scoruri_dupa = self._scoruri_curente()
+                    valid_function, ai_consumed = self.solicita_functie_valida(
+                        testing_md_path=testing_md_path,
+                        bullet_index=None,
+                        remaining_ai_budget_sec=ai_budget_ramas,
+                        failed_attempts=self.get_failed_attempts_for_category(category),
+                    )
 
-                    if not self._exista_imbunatatire(scoruri_inainte, scoruri_dupa):
-                        self._afiseaza_status("The proposed test was rejected. Removing it from the file...")
-                        self._elimina_functie_din_fisier(fisier_test_py, nume_functie)
+                    ai_budget_ramas -= ai_consumed
 
-                        if time.time() >= deadline_categorie:
-                            self.reset_context()
+                    if not valid_function:
+                        self.logger.debug(
+                            "Nu a fost obtinuta nicio propunere valida in bugetul ramas sau in tentativele disponibile."
+                        )
+                        iterations_without_improvement += 1
+
+                        if ai_budget_ramas <= 0:
                             break
 
-                        self._afiseaza_status("Asking AI for a better proposal in the same category...")
-                        functie_valida = self._solicita_functie_valida(
-                            mesaj_initial=(
-                                "The testing parameters were not improved. "
-                                "Write a better test for the same category that improves the existing test suite. "
-                                "Return only the Python test function."
-                            ),
-                            deadline=deadline_categorie,
-                            mesaj_retransmitere=(
-                                "Return only the corrected Python test function."
-                            ),
+                        continue
+
+                    function_name = self.response_parser.extract_function_name(
+                        valid_function
+                    )
+
+                    if self.workspace.function_exists_in_file(
+                        file_path=category_test_file,
+                        function_name=function_name,
+                    ):
+                        rejection_reason = (
+                            f"Propunerea este respinsa deoarece functia {function_name} "
+                            f"exista deja in {category_test_file.name}."
+                        )
+                        self.logger.debug(rejection_reason)
+                        self.remember_failed_attempt(
+                            category=category,
+                            function_code=valid_function,
+                            rejection_reason=rejection_reason,
+                        )
+                        self.remember_rejected_hash(
+                            category=category,
+                            function_code=valid_function,
+                        )
+                        self.workspace.clear_proposal_test_file()
+                        self.ollama_client.reset_context()
+                        iterations_without_improvement += 1
+                        continue
+
+                    if self.has_rejected_hash(category, valid_function):
+                        rejection_reason = (
+                            "Propunerea este respinsa deoarece aceasta functie a mai fost "
+                            "evaluata si respinsa anterior in aceasta categorie."
+                        )
+                        self.logger.debug(rejection_reason)
+                        self.remember_failed_attempt(
+                            category=category,
+                            function_code=valid_function,
+                            rejection_reason=rejection_reason,
+                        )
+                        self.workspace.clear_proposal_test_file()
+                        self.ollama_client.reset_context()
+                        iterations_without_improvement += 1
+                        continue
+
+                    self.workspace.overwrite_proposal_with_function(valid_function)
+
+                    candidate_selected_test_files = self.build_candidate_selected_test_files(
+                        category_test_file_name=category_test_file.name
+                    )
+
+                    after_scores = self.get_current_scores(candidate_selected_test_files)
+
+                    self.logger.debug(
+                        f"Scoruri candidat pentru categoria {category} "
+                        f"({candidate_selected_test_files}) -> "
+                        f"{self.format_scores_for_debug(after_scores)}"
+                    )
+
+                    should_accept = self.should_accept_stage2_proposal(
+                        category_has_tests_before=category_has_tests,
+                        before_scores=before_scores,
+                        after_scores=after_scores,
+                    )
+
+                    if should_accept:
+                        self.logger.console_step(
+                            f"test nou acceptat in categoria {category}"
                         )
 
-                        if functie_valida is None:
-                            self.reset_context()
-                            break
+                        self.workspace.append_extension_function_to_test_file(
+                            test_file_path=category_test_file,
+                            function_code=valid_function,
+                        )
+                        self.numar_reguli_adaugate += 1
 
-                        nume_functie = self._extrage_nume_functie_test(functie_valida)
-                        if nume_functie is None:
-                            self.reset_context()
-                            break
+                        rule, reasoning = self.solicita_rule_si_reasoning(
+                            testing_md_path=testing_md_path,
+                            accepted_function=valid_function,
+                        )
 
-                        self._afiseaza_status(f"Adding improved proposal to {fisier_test_py.name}...")
-                        self._adauga_functie_in_fisier(fisier_test_py, functie_valida)
-                        self._afiseaza_status("Evaluating the suite after adding the improved proposal...")
-                        scoruri_dupa = self._scoruri_curente()
+                        improvement = self.tests_performance.format_improvement(
+                            before_scores=before_scores,
+                            after_scores=after_scores,
+                        )
 
-                        if not self._exista_imbunatatire(scoruri_inainte, scoruri_dupa):
-                            self._afiseaza_status("The improved proposal was also rejected. Removing it from the file...")
-                            self._elimina_functie_din_fisier(fisier_test_py, nume_functie)
-                            continue
+                        self.logger.append_rule(
+                            category=category,
+                            rule=rule,
+                            reasoning=reasoning,
+                            improvement=improvement,
+                        )
 
-                    self._afiseaza_status("The proposed test was accepted.")
-                    self._afiseaza_status("The proposed test was accepted.")
-                    self.numar_reguli_adaugate += 1
+                        self.workspace.append_rule_bullet_to_testing_md(
+                            testing_md_path=testing_md_path,
+                            rule_text=rule,
+                        )
 
-                    imbunatatire = self._format_imbunatatire(
-                        scoruri_inainte,
-                        scoruri_dupa,
-                    )
+                        self.workspace.clear_proposal_test_file()
+                        self.ollama_client.reset_context()
 
-                    self._afiseaza_status("Requesting the general rule and reasoning for the accepted test...")
-                    self._afiseaza_status("Aider: asking for the abstract rule and reasoning behind the accepted test...")
-                    meta_info = self.execute(
-                        "State exactly two fields in English on separate lines:\n"
-                        f"Rule: the new testing rule implemented for category {categorie}, different from the existing ones.\n"
-                        "Reasoning: the reasoning used to create or choose this new rule."
-                    )
+                        ai_budget_ramas = float(
+                            self.config.timeouts.timeout_categorie_ai_sec
+                        )
+                        iterations_without_improvement = 0
 
-                    regula, motivare = self._extrage_regula_motivare(meta_info)
+                        self.logger.debug(
+                            f"Bugetul AI pentru {category} a fost resetat dupa acceptarea propunerii."
+                        )
+                        self.logger.debug(
+                            f"Contorul de stagnare pentru {category} a fost resetat la 0."
+                        )
+                    else:
+                        rejection_reason = self.explain_stage2_rejection_reason(
+                            category_has_tests_before=category_has_tests,
+                            before_scores=before_scores,
+                            after_scores=after_scores,
+                        )
+                        self.logger.debug(rejection_reason)
 
-                    self._afiseaza_status("Writing the accepted rule to Logs.jsonl...")
-                    self._afiseaza_status("Writing the accepted rule to Logs.jsonl...")
-                    self.log(
-                        categorie=categorie,
-                        regula=regula,
-                        motivare=motivare,
-                        imbunatatire=imbunatatire,
-                    )
+                        self.remember_failed_attempt(
+                            category=category,
+                            function_code=valid_function,
+                            rejection_reason=rejection_reason,
+                        )
+                        self.remember_rejected_hash(
+                            category=category,
+                            function_code=valid_function,
+                        )
 
-                    # Dupa fiecare succes, se reseteaza AI-ul si se acorda din nou
-                    # intreg intervalul pentru cautarea urmatoarei reguli noi.
-                    self.reset_context()
-                    deadline_categorie = time.time() + 10 * self.timeout_sec
+                        self.workspace.clear_proposal_test_file()
+                        self.ollama_client.reset_context()
+                        iterations_without_improvement += 1
 
         finally:
-            self.stop_ai()
+            self.ollama_client.stop()
 
 
-def main():
+    def normalize_rule_text(self, rule: str, fallback_rule: str = "") -> str:
+        """
+        Curata textul regulii inainte de salvarea in testing_*.md si Logs.jsonl.
+
+        Reguli:
+        - elimina prefixe redundante
+        - elimina spatii inutile
+        - foloseste fallback_rule daca regula lipseste sau este prea slaba
+        """
+        cleaned_rule = (rule or "").strip()
+        fallback_rule = (fallback_rule or "").strip()
+
+        for prefix in ("Rule:", "# Rule:"):
+            if cleaned_rule.startswith(prefix):
+                cleaned_rule = cleaned_rule[len(prefix):].strip()
+
+        weak_rule_values = {
+            "",
+            "n/a",
+            "none",
+            "unknown",
+            "generic rule",
+            "test rule",
+            "new test",
+            "new accepted test",
+        }
+
+        if cleaned_rule.lower() in weak_rule_values:
+            cleaned_rule = fallback_rule
+
+        return cleaned_rule
+
+
+    def solicita_rule_si_reasoning(
+        self,
+        testing_md_path: Path,
+        accepted_function: str,
+    ) -> tuple[str, str]:
+        """
+        Cere separat metadatele Rule / Reasoning pentru un test deja acceptat.
+
+        Returneaza:
+        - rule
+        - reasoning
+        """
+        self.state = self.config.states.RULE_SI_REASONING
+
+        prompt = self.prompt_builder.build_prompt(
+            state=self.state,
+            testing_md_path=testing_md_path,
+            accepted_function=accepted_function,
+        )
+
+        ollama_response = self.ollama_client.generate(prompt)
+        parsed_response = self.response_parser.parse_response(ollama_response.text)
+
+        rule, reasoning = self.response_parser.extract_rule_and_reasoning_from_comments(
+            parsed_response.metadata_comments or ollama_response.text
+        )
+
+        rule = self.normalize_rule_text(
+            rule=rule,
+            fallback_rule="New accepted test rule in this category",
+        )
+
+        return rule, reasoning
+
+
+    # ------------------------------------------------------------------
+    # Arhivare si raportare finala
+    # ------------------------------------------------------------------
+
+    def arhiveaza(self) -> None:
+        """
+        Arhiveaza artefactele sesiunii curente, daca exista.
+        """
+        self.logger.console_step("arhivez rezultatele")
+
+        if not self.archive_manager.has_any_artifacts_to_archive():
+            self.logger.debug("Nu exista artefacte de arhivat.")
+            return
+
+        result = self.archive_manager.archive_current_session_artifacts()
+        self.logger.debug(
+            self.archive_manager.format_archive_result_for_debug(result)
+        )
+
+
+    def afiseaza_reguli_adaugate(self) -> None:
+        """
+        Afiseaza regulile noi acceptate in sesiunea curenta.
+        """
+        self.logger.console_step("Rezultate finale:")
+        self.logger.print_last_added_rules(self.numar_reguli_adaugate)
+
+
+    def compute_function_hash(self, function_code: str) -> str:
+        """
+        Construieste un hash stabil pentru o functie de test, astfel incat
+        aceeasi propunere sa poata fi recunoscuta chiar daca difera doar prin
+        whitespace minor.
+        """
+        normalized_code = "\n".join(
+            line.rstrip()
+            for line in (function_code or "").strip().splitlines()
+        ).strip()
+
+        return hashlib.sha256(normalized_code.encode("utf-8")).hexdigest()
+
+
+    def get_failed_attempts_for_category(self, category: str) -> list[tuple[str, str]]:
+        """
+        Returneaza lista incercarilor respinse deja memorate pentru o categorie.
+        """
+        return list(self.failed_attempts_by_category.get(category, []))
+
+
+    def remember_failed_attempt(
+        self,
+        category: str,
+        function_code: str,
+        rejection_reason: str,
+        max_items_per_category: int = 25,
+    ) -> None:
+        """
+        Memoreaza o incercare respinsa pentru a putea fi data ulterior modelului
+        ca exemplu negativ.
+
+        Duplicatele exacte (aceeasi functie + acelasi motiv) sunt ignorate.
+        """
+        clean_function = (function_code or "").strip()
+        clean_reason = (rejection_reason or "").strip()
+
+        if not clean_function:
+            clean_function = "# Empty or unusable previous answer"
+
+        if not clean_reason:
+            clean_reason = "Rejected without an explicit recorded reason."
+
+        bucket = self.failed_attempts_by_category.setdefault(category, [])
+        candidate = (clean_function, clean_reason)
+
+        if candidate in bucket:
+            return
+
+        bucket.append(candidate)
+
+        if len(bucket) > max_items_per_category:
+            del bucket[:-max_items_per_category]
+
+
+    def has_rejected_hash(self, category: str, function_code: str) -> bool:
+        """
+        Verifica daca functia a mai fost respinsa deja in etapa 2 pentru categoria data.
+        """
+        function_hash = self.compute_function_hash(function_code)
+        return function_hash in self.rejected_hashes_by_category.get(category, set())
+
+
+    def remember_rejected_hash(self, category: str, function_code: str) -> None:
+        """
+        Salveaza hash-ul unei propuneri respinse in etapa 2, pentru a evita
+        re-evaluarea aceleiasi functii.
+        """
+        function_hash = self.compute_function_hash(function_code)
+        bucket = self.rejected_hashes_by_category.setdefault(category, set())
+        bucket.add(function_hash)
+
+
+    def build_candidate_selected_test_files(
+        self,
+        category_test_file_name: str,
+    ) -> list[str]:
+        """
+        Returneaza lista fisierelor care trebuie evaluate pentru o propunere noua:
+        - fisierul categoriei
+        - fisierul temporar al propunerii
+
+        Noua logica de acceptare trebuie sa masoare performanta pe:
+        testele categoriei + propunerea noua.
+        """
+        return [
+            category_test_file_name,
+            self.config.files.proposal_test_file_name,
+        ]
+
+
+    def should_accept_stage2_proposal(
+        self,
+        category_has_tests_before: bool,
+        before_scores: PerformanceScores,
+        after_scores: PerformanceScores,
+    ) -> bool:
+        """
+        Decide daca o propunere din etapa 2 trebuie acceptata.
+
+        Reguli:
+        - daca categoria avea deja teste, se aplica criteriul strict actual:
+        suita trebuie sa fie curata inainte si dupa, niciun scor sa nu scada,
+        iar cel putin un scor sa creasca
+        - daca categoria era goala, permitem bootstrap-ul:
+        propunerea este acceptata daca noua suita candidat este curata la pytest
+        si exista o imbunatatire reala fata de starea 0-score
+        (inclusiv cresterea pytest de la 0 la 100)
+        """
+        if category_has_tests_before:
+            return self.tests_performance.has_strict_improvement(
+                before_scores=before_scores,
+                after_scores=after_scores,
+            )
+
+        if not self.tests_performance.is_pytest_clean(after_scores):
+            return False
+
+        before_values = (
+            before_scores.pytest_score,
+            before_scores.coverage_score,
+            before_scores.mutation_score,
+        )
+        after_values = (
+            after_scores.pytest_score,
+            after_scores.coverage_score,
+            after_scores.mutation_score,
+        )
+
+        return any(after > before for before, after in zip(before_values, after_values))
+
+
+    def explain_stage2_rejection_reason(
+        self,
+        category_has_tests_before: bool,
+        before_scores: PerformanceScores,
+        after_scores: PerformanceScores,
+    ) -> str:
+        """
+        Explica de ce o propunere din etapa 2 a fost respinsa.
+
+        Pentru categoriile deja populate folosim explicatia existenta.
+        Pentru categoriile goale folosim o explicatie de bootstrap.
+        """
+        if category_has_tests_before:
+            return self.tests_performance.explain_rejection_reason(
+                before_scores=before_scores,
+                after_scores=after_scores,
+            )
+
+        if not self.tests_performance.is_pytest_clean(after_scores):
+            return (
+                "Propunerea este respinsa deoarece categoria era goala, iar dupa "
+                "adaugarea testului candidat suita nu este curata la pytest."
+            )
+
+        before_values = (
+            before_scores.pytest_score,
+            before_scores.coverage_score,
+            before_scores.mutation_score,
+        )
+        after_values = (
+            after_scores.pytest_score,
+            after_scores.coverage_score,
+            after_scores.mutation_score,
+        )
+
+        if not any(after > before for before, after in zip(before_values, after_values)):
+            return (
+                "Propunerea este respinsa deoarece nu reuseste sa stabileasca o baza "
+                "mai buna pentru categorie si nu imbunatateste niciun scor."
+            )
+
+        return "Propunerea poate fi acceptata."
+
+
+
+    # ------------------------------------------------------------------
+    # Flux principal
+    # ------------------------------------------------------------------
+
+    def run(self) -> None:
+        """
+        Ruleaza fluxul complet al framework-ului.
+        """
+        self.logger.section("Pregatiri initiale:")
+        self.cleanup_manager.cleanup_before_run()
+        self.verifica_conditii_initiale()
+        self.logger.separator()
+
+        self.scrie_teste_initiale()
+        self.logger.separator()
+
+        self.gaseste_teste_noi()
+        self.logger.separator()
+
+        self.logger.section("Final:")
+        self.arhiveaza()
+        self.cleanup_manager.cleanup_after_run()
+        self.afiseaza_reguli_adaugate()
+
+
+def main() -> None:
     """
-    Punct de intrare minimal.
+    Punct minim de intrare pentru executie.
 
-    Constructorul clasei AutoTesting ruleaza intregul flux, iar main doar
-    instantiataza obiectul si gestioneaza erorile la nivel inalt.
+    Creeaza orchestratorul si ruleaza intregul flux, raportand erorile
+    principale intr-o forma simpla si lizibila.
     """
     try:
-        AutoTesting()
-    except (FileNotFoundError, ValueError, RuntimeError, subprocess.TimeoutExpired) as eroare:
-        print(eroare)
+        auto_testing = AutoTesting(
+            debugging_enabled=True,
+            print_debug=True,
+        )
+        auto_testing.run()
+    except (
+        FileNotFoundError,
+        ValueError,
+        RuntimeError,
+        OSError,
+        Exception,
+    ) as error:
+        print(error)
 
 
 if __name__ == "__main__":

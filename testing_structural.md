@@ -1,31 +1,15 @@
-# General directions for structural testing
+# Structural testing
 
-Look for tests based on code structure and execution flow.
+Focus on execution structure.
 
-Search for:
-- statements
+Structural rules should target things such as:
 - branches
-- simple conditions
-- compound conditions
-- loops
-- different important execution paths
+- condition outcomes
+- loop entry and loop exit
+- zero, one, or multiple iterations
+- distinct execution paths
 
-Look for tests that exercise both outcomes of decisions when possible:
-- true
-- false
+A structurally new test must exercise a genuinely different execution path or control-flow outcome.
+A different invalid input that reaches the same early validation path does not count as a new structural rule.
 
-For compound conditions, look for tests that exercise different truth values of the individual conditions when possible.
-
-Look for tests where changing one condition can change the final decision.
-
-Pay special attention to:
-- if with else
-- if without else
-- nested conditions
-- loop entry
-- zero iterations
-- one iteration
-- multiple iterations
-- different loop exit cases
-
-Prefer tests that exercise structurally different parts of the code.
+1. test a case that enters the loop zero times
