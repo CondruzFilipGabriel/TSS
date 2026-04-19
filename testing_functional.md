@@ -16,3 +16,6 @@ A functionally new rule must be genuinely distinct from the other functional rul
 A functionally new test should check a meaningfully different observable result, validation behavior, boundary effect, or observable priority between outcomes.
 
 1. test a valid input case that should return the normal accepted result
+2. Validate behavior for zero value inputs in analysis functions
+3. Validate behavior for negative input values in analysis functions
+4. New distinct accepted rule in this category

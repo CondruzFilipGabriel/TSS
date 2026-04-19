@@ -18,3 +18,6 @@ A structurally new test should exercise a meaningfully different branch outcome,
 A different input that reaches the same decisive path does not count as a new structural rule.
 
 1. test a case that enters the loop zero times
+2. New distinct accepted rule in this category
+3. Ensure the function handles zero iterations in a loop correctly.
+4. Ensure the function handles empty input gracefully.
