@@ -1,4 +1,6 @@
 from __future__ import annotations
+import re
+from pathlib import Path
 
 """
 WorkspaceManager.py
@@ -19,32 +21,12 @@ Scopurile principale sunt:
 - verificarea existentei unei functii intr-un fisier
 - extragerea informatiilor relevante din fisierele markdown de reguli
 
-De ce exista acest modul separat
---------------------------------
-In varianta initiala, AutoTesting.py se ocupa direct de:
-- citirea textului din fisiere
-- scrierea de fisiere
-- listarea fisierelor testing_*.md
-- adaugarea importurilor standard in test files
-- golirea fisierului test_propunere.py
-- extragerea regulilor si a bullet-urilor din fisierele markdown
-- verificarea existentei unei functii in fisierele test_*.py
-
-Aceasta combinatie ingreuneaza mentenanta si testarea. Prin extragerea acestor
-responsabilitati in WorkspaceManager.py:
-- AutoTesting.py devine un orchestrator mai curat
-- logica de acces la fisiere devine reutilizabila
-- parsarea fisierelor markdown devine centralizata
-
 Observatii
 ----------
 1. Acest modul nu se ocupa de arhivare. Arhivarea va fi mutata in Archive.py.
 2. Acest modul nu se ocupa de logging. Logging-ul va fi tratat de Logger.py.
 3. Acest modul nu se ocupa de validarea raspunsurilor AI sau de scorare.
 """
-
-import re
-from pathlib import Path
 
 from Config import AppConfig
 from Logger import Logger

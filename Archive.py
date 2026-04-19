@@ -14,27 +14,6 @@ Scopul lui este sa scoata din orchestrator logica de:
 - mutare a fisierului to_test.py
 - mutare a tuturor fisierelor test_*.py
 
-De ce exista acest modul separat
---------------------------------
-In varianta initiala, AutoTesting.py continea direct metoda arhiveaza(),
-care:
-- inspecta continutul folderului arh
-- calcula urmatorul numar de arhiva
-- crea un nou subfolder
-- muta fisierele relevante in acel subfolder
-
-Aceasta responsabilitate este distincta de:
-- generarea testelor
-- validarea lor
-- scorarea performantei
-- logging
-
-Prin urmare, merita un fisier separat pentru:
-- claritate
-- reutilizare
-- mentenanta mai usoara
-- reducerea cuplarii in orchestrator
-
 Observatii
 ----------
 1. Acest modul nu decide cand se face arhivarea. El doar executa arhivarea.
@@ -245,6 +224,7 @@ class ArchiveManager:
         )
         return moved_file
 
+
     # ------------------------------------------------------------------
     # Arhivare completa
     # ------------------------------------------------------------------
@@ -278,6 +258,7 @@ class ArchiveManager:
             moved_files=moved_files,
         )
 
+
     # ------------------------------------------------------------------
     # Utilitare de inspectie
     # ------------------------------------------------------------------
@@ -287,6 +268,7 @@ class ArchiveManager:
         Verifica daca exista cel putin un artefact de arhivat.
         """
         return len(self.get_files_to_archive()) > 0
+    
 
     def format_archive_result_for_debug(self, result: ArchiveResult) -> str:
         """

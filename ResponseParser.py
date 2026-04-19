@@ -29,22 +29,6 @@ Responsabilitati principale
    - regula abstracta
    - motivarea
 
-De ce exista acest modul separat
---------------------------------
-In varianta initiala, AutoTesting.py se ocupa direct si de:
-- curatarea outputului Ollama
-- extragerea functiei din raspuns
-- extragerea comentariilor Rule / Reasoning
-- extragerea numelui functiei
-
-Aceste operatii formeaza un subsistem distinct, care nu tine nici de:
-- orchestrare
-- validare AST / pytest
-- lucru cu fisiere
-- scorare
-
-Prin urmare, merita un modul dedicat.
-
 Observatii
 ----------
 1. Acest modul nu valideaza sintactic functia. Asta va fi responsabilitatea

@@ -14,21 +14,6 @@ Ollama. Scopul lui este sa scoata din orchestrator responsabilitatile legate de:
 - primirea raspunsului brut
 - logarea interactiunii si a timpului de generatie
 
-De ce exista acest modul separat
---------------------------------
-In varianta initiala, AutoTesting.py continea direct:
-- request-ul HTTP catre API-ul local Ollama
-- verificarea endpoint-ului /api/tags
-- pornirea procesului `ollama serve`
-- oprirea procesului
-- executia efectiva a cererii de generare
-
-Aceasta logica este un subsistem distinct si merita izolata pentru:
-- claritate
-- reutilizare
-- testare mai usoara
-- reducerea cuplarii dintre fluxul principal si infrastructura AI
-
 Observatii
 ----------
 1. Acest modul nu construieste prompturile. Asta este responsabilitatea

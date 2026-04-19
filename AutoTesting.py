@@ -18,42 +18,24 @@ Flux general
    - generarea testelor initiale pe baza bullet-urilor explicite din
      fisierele testing_*.md
 3. Etapa 2:
-   - cautarea unor teste noi, dincolo de bullet-urile explicite, pentru
+   - cautarea unor teste noi, dincolo de bullet-urile existente, pentru
      fiecare categorie
-4. Logarea regulilor acceptate
-5. Arhivarea artefactelor finale
-6. Afisarea regulilor adaugate in sesiunea curenta
-
-De ce ramane un fisier separat
-------------------------------
-Desi responsabilitatile tehnice au fost extrase in module dedicate, este in
-continuare nevoie de un loc unic care sa:
-- decida ordinea etapelor
-- gestioneze starile fluxului
-- coordoneze interactiunea dintre componente
-- aplice regulile de acceptare / respingere ale testelor propuse
-
-Prin urmare, AutoTesting.py ramane orchestratorul pur al sistemului.
+4. Etapa 3:
+   - sintetizarea unor reguli care sa caracterizeze testele noi propuse, 
+   care sa fie adaugate in fisierele testing_*.md corespunzatoare claselor
+   de teste extinse prin testele create 
+5. Logarea regulilor acceptate
+6. Arhivarea artefactelor finale
+7. Afisarea in terminal a regulilor adaugate in sesiunea curenta
 
 Observatii importante
 ---------------------
-1. Acest fisier nu mai contine direct logica de:
-   - acces la fisiere
-   - parsare raspunsuri
-   - validare AST / pytest
-   - comunicare HTTP cu Ollama
-   - scorare prin pytest / coverage / mutmut
-   - arhivare
+1. Limita de timp pentru etapa 2 include doar timpul de generare disponibil
+   AI. Timpul de validare si evaluare a performantei nu sunt luate in 
+   considerare.
 
-2. Toate aceste responsabilitati au fost mutate in module separate, iar aici
-   sunt doar coordonate.
-
-3. Bugetul de timp pentru etapa 2 masoara doar timpul de generatie AI,
-   exact ca in implementarea initiala. Timpul de validare si scorare nu este
-   scazut din acel buget.
-
-4. Daca o propunere noua este acceptata in etapa 2, bugetul AI pentru categoria
-   respectiva este resetat.
+4. Daca o propunere noua este acceptata in etapa 2, timpul AI pentru categoria
+   respectiva este resetat la valoareea initiala.
 """
 
 from pathlib import Path
@@ -227,8 +209,6 @@ class AutoTesting:
         Returneaza:
         - function_code valid sau None
         - timpul total consumat de AI pentru aceasta secventa de generare
-
-        Noua logica:
         - in etapa 2, promptul primeste si incercarile deja respinse
         - la fiecare invalidare, functia respinsa si motivul concret sunt memorate
         pentru categoria curenta
@@ -437,7 +417,8 @@ class AutoTesting:
         - se masoara doar timpul de generatie AI
         - evaluarea se face pe: testele categoriei + test_propunere.py
         - daca o propunere valida imbunatateste categoria, este acceptata
-        - daca o propunere este acceptata, bugetul AI pe categorie se reseteaza
+        - daca o propunere este acceptata, limita de timp a AI pe categorie 
+        se reseteaza
         - daca se acumuleaza 20 de iteratii consecutive fara imbunatatire,
         cautarea se opreste pentru categoria curenta
         - aceeasi functie deja respinsa nu mai este rescored
@@ -1463,9 +1444,6 @@ class AutoTesting:
             )
 
         return "Propunerea poate fi acceptata."
-
-
-
 
 
     # ------------------------------------------------------------------

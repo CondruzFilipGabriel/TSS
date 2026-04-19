@@ -22,9 +22,9 @@ Ce contine
 2. Timeout-urile si limitele de executie:
    - timeout pentru comenzi normale
    - timeout pentru mutmut
-   - bugetul maxim AI pe categorie
-   - numarul maxim de corectii
-   - numarul maxim de raspunsuri goale consecutive
+   - bugetul de timp maxim AI pe categorie
+   - numarul de timp maxim de corectii
+   - numarul de timp maxim de raspunsuri goale consecutive
 
 3. Constante de lucru:
    - modelul Ollama implicit

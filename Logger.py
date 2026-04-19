@@ -15,19 +15,6 @@ Scopurile principale sunt:
 - afisarea ultimelor reguli adaugate in sesiunea curenta
 - salvarea interactiunilor brute cu Ollama, daca debugging-ul este activ
 
-De ce exista acest modul separat
---------------------------------
-In varianta initiala, AutoTesting.py se ocupa atat de orchestrare, cat si de:
-- print-uri de debug
-- scriere in Logs.jsonl
-- citirea logului pentru afisarea regulilor adaugate
-
-Aceasta combinatie produce cuplare inutila intre fluxul principal si
-persistenta logurilor. Prin extragerea acestei logici in Logger.py:
-- orchestratorul ramane mai curat
-- logarea devine reutilizabila
-- comportamentul poate fi schimbat dintr-un singur loc
-
 Observatii de utilizare
 -----------------------
 1. Clasa Logger poate afisa mesaje in terminal si, optional, le poate salva

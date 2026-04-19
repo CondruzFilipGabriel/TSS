@@ -27,19 +27,6 @@ Ce tipuri de prompturi construieste
 3. Prompt pentru etapa 3:
    - corectarea unei propuneri invalide, pe baza erorii de validare
 
-De ce exista acest modul separat
---------------------------------
-In varianta initiala, AutoTesting.py continea metoda
-`construieste_prompt_ollama(...)`, care depindea simultan de:
-- Rules.md
-- fisierele testing_*.md
-- to_test.py
-- continutul curent al fisierelor test_<categorie>.py
-- starea curenta a fluxului
-
-Aceasta logica este suficient de complexa si suficient de distincta
-incat merita un fisier separat.
-
 Observatii
 ----------
 1. Acest modul nu trimite prompturile la Ollama. Asta va fi responsabilitatea

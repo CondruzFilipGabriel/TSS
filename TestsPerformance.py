@@ -34,22 +34,6 @@ Ce masoara
    - detectarea existentei unei imbunatatiri
    - formatarea mesajului de imbunatatire pentru log
 
-De ce exista acest modul separat
---------------------------------
-In varianta initiala, AutoTesting.py se ocupa direct de:
-- rularea pytest
-- rularea coverage
-- rularea mutmut
-- parsarea outputului acestor tooluri
-- calcularea scorurilor curente
-- compararea scorurilor inainte / dupa
-
-Aceasta este o responsabilitate distincta si merita izolata pentru:
-- claritate
-- reutilizare
-- testare separata
-- reducerea cuplarii dintre fluxul principal si infrastructura externa
-
 Observatii importante
 ---------------------
 1. Acest modul nu valideaza testul propus. Asta este responsabilitatea

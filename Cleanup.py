@@ -15,19 +15,6 @@ rulari anterioare, astfel incat:
 - dupa terminarea executiei sa nu ramana fisiere temporare care pot strica
   urmatoarea rulare
 
-De ce exista separat de Archive.py
-----------------------------------
-Archive.py are rolul de a pastra artefactele utile ale sesiunii:
-- to_test.py
-- test_*.py
-
-Cleanup.py are rolul opus:
-- sterge artefactele tehnice temporare
-- reseteaza fisiere de lucru
-- elimina directoare si cache-uri care pot incurca rularea ulterioara
-
-Aceasta separare este mai curata si mai usor de intretinut.
-
 Ce curata
 ---------
 1. Artefacte mutmut:
@@ -43,14 +30,6 @@ Ce curata
 3. Artefacte temporare ale framework-ului:
    - __validate_temp__.py
    - resetarea lui test_propunere.py
-
-Observatii
-----------
-1. test_propunere.py nu este sters, ci resetat la continutul standard cu
-   importurile de baza.
-2. Logs.jsonl nu este sters.
-3. Directorul arh/ nu este sters.
-4. Curatarea este sigura: se sterg doar artefacte tehnice cunoscute.
 """
 
 import shutil

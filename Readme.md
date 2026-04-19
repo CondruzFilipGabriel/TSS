@@ -1,4 +1,4 @@
-# Proiect Testarea Sistemelor Software
+# Proiect "Testarea Sistemelor Software"
 
 ## Cuprins
 * [Tema: imbunatatirea testarii unitare cu IA](#tema-imbunatatirea-testarii-unitare-cu-ia)
@@ -186,10 +186,7 @@
 
         Coverage.py, version 7.13.5 with C extension
 
-    * framework-ul nu depinde de un `pytest.ini`
-    * pentru rularea mutmut, sectiunea relevanta din `pyproject.toml` este generata si rescrisa temporar de framework atunci cand este necesar
-
-**Comenzi utile de verificare manuala**
+**Comenzi utile pentru verificare manuala**
 
     python3 -m pytest -q
 
@@ -261,7 +258,7 @@
 
 * memoreaza propunerile respinse si foloseste hash-uri stabile pentru a evita reevaluarea aceleiasi functii deja respinse in etapa 2
 
-* permite pornirea de la zero pentru o categorie care nu are inca teste acceptate, printr-un mecanism de bootstrap
+* permite pornirea de la zero pentru o categorie care nu are inca teste acceptate
 
 * dupa acceptarea unui test nou, cere separat de la AI:
   * regula generala asociata testului
@@ -328,7 +325,7 @@
 
 [<< Cuprins](#cuprins)
 
-* a fost separata arhitectura pe module specializate pentru orchestrare, prompturi, validare, scorare, logging, arhivare si lucru cu fisierele
+* a fost separata arhitectura pe module specializate pentru orchestrare, prompturi, validare, scoring, logging, arhivare si lucru cu fisierele
 * a fost separat clar fluxul in etapa unu, etapa doi si etapa trei, fiecare cu scop propriu
 * in etapa unu se genereaza teste pentru regulile explicite deja existente in fisierele categoriei
 * in etapa doi se cauta doar teste noi care aduc o imbunatatire reala categoriei curente
@@ -346,9 +343,10 @@
 * in etapa doi sunt acceptate doar propunerile care imbunatatesc categoria fara sa strice scorurile deja obtinute
 * s-a stabilit o ordine pentru 3 prioritati in scrierea functiilor de  testare: corectitudinea & validitatea, reprezentabivitatea / originalitatea, simplitatea
 * cautarea pe o categorie este oprita dupa un numar de iteratii consecutive fara imbunatatire, pentru a limita consumul inutil
-* `coverage` si `mutmut` nu mai sunt rulate atunci cand `pytest` nu este curat, reducand costul evaluarilor inutile
+* `coverage` si `mutmut` nu mai sunt rulate atunci cand `pytest` nu produce un rezultat curat, reducand costul evaluarilor inutile
 * cererea de test este separata de cererea de regula, pentru a nu amesteca generarea codului cu abstractizarea regulii
-* forma regulii generale este validata, iar regulile prea concrete, prea apropiate de cod sau prea apropiate de reguli deja existente pot fi reformulate
+* forma regulii generale este validata iar regulile prea concrete, prea apropiate de cod sau prea apropiate de reguli deja existente pot fi reformulate
+* pentru cresterea gradului de generalitate si relevanta a regulilor create, s-a dedicat o sesiune exclusiv pentru imbunatatirea regulilor initial formulate pentru testele acceptate
 * fisierul temporar `test_propunere.py` este exclus din arhivare, astfel incat arhiva sa contina doar artefactele finale relevante
 * logarea tehnica a fost imbunatatita, astfel incat motivele de respingere si evolutia scorurilor sa poata fi urmarite mai usor
 

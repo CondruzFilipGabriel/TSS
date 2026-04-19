@@ -21,22 +21,6 @@ Ce valideaza
 5. Nu exista cod suplimentar in afara acelei functii.
 6. Functia poate fi executata tehnic prin pytest intr-un fisier temporar.
 
-De ce exista acest modul separat
---------------------------------
-In varianta initiala, AutoTesting.py continea direct metoda validate(...),
-care amesteca:
-- parsarea raspunsului
-- verificarea placeholder-elor
-- parsarea AST
-- verificarea structurii functiei
-- rularea pytest pe un fisier temporar
-
-Aceasta este o responsabilitate distincta si merita izolata pentru:
-- claritate
-- reutilizare
-- testare separata
-- simplificarea orchestratorului
-
 Observatii importante
 ---------------------
 1. Acest modul nu parseaza raspunsul brut. Pentru asta foloseste ResponseParser.
