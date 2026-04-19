@@ -1,5 +1,6 @@
 from __future__ import annotations
 import hashlib
+import re
 
 """
 AutoTesting.py
@@ -688,6 +689,505 @@ class AutoTesting:
         return cleaned_rule
 
 
+    def normalize_rule_text_for_comparison(self, text: str) -> str:
+        """
+        Normalizeaza un text de regula pentru comparatii aproximative.
+
+        Pastreaza doar litere si spatii, pentru a putea compara semantic
+        formularea curenta cu regulile deja existente.
+        """
+        lowered = (text or "").lower()
+        letters_only = re.sub(r"[^a-zA-Z\s]", " ", lowered)
+        compact = re.sub(r"\s+", " ", letters_only).strip()
+        return compact
+
+
+    def contains_forbidden_rule_characters(self, rule: str) -> bool:
+        """
+        Verifica daca regula contine caractere sau forme interzise.
+
+        Interzicem explicit:
+        - cifre
+        - underscore
+        - backticks
+        - paranteze, acolade, paranteze patrate
+        - slash-uri
+        - operatori sau notatii asemanatoare codului
+        - ghilimele
+        """
+        if not (rule or "").strip():
+            return False
+
+        forbidden_pattern = r"[0-9_`\"'()\[\]{}\\/=<>\+\-\*%]"
+        return re.search(forbidden_pattern, rule) is not None
+
+
+    def extract_forbidden_rule_identifiers(
+        self,
+        testing_md_path: Path,
+        accepted_function: str,
+    ) -> set[str]:
+        """
+        Extrage identificatori concreti din codul sursa si din functia acceptata,
+        pentru a preveni aparitia lor in regula generalizata.
+
+        Exemple:
+        - nume de functie
+        - nume de variabile
+        - nume de stari / rezultate concrete
+        """
+        source_code = self.workspace.read_file_under_test_source()
+        combined_text = f"{source_code}\n{accepted_function}"
+
+        identifiers = re.findall(r"\b[A-Za-z_][A-Za-z0-9_]*\b", combined_text)
+
+        ignored_words = {
+            "def",
+            "return",
+            "if",
+            "elif",
+            "else",
+            "for",
+            "while",
+            "with",
+            "raise",
+            "assert",
+            "in",
+            "and",
+            "or",
+            "not",
+            "true",
+            "false",
+            "none",
+            "import",
+            "from",
+            "pytest",
+            "test",
+        }
+
+        result: set[str] = set()
+        for identifier in identifiers:
+            lowered = identifier.lower()
+            if lowered in ignored_words:
+                continue
+            if len(lowered) <= 2:
+                continue
+            result.add(lowered)
+
+        return result
+
+
+    def rule_contains_forbidden_identifiers(
+        self,
+        rule: str,
+        forbidden_identifiers: set[str],
+    ) -> bool:
+        """
+        Verifica daca regula contine identificatori concreti extrasi din scriptul curent.
+        """
+        normalized_rule = re.findall(r"\b[a-zA-Z_][a-zA-Z_]*\b", (rule or "").lower())
+
+        for token in normalized_rule:
+            if token in forbidden_identifiers:
+                return True
+
+        return False
+
+
+    def is_rule_too_similar_to_existing_rules(
+        self,
+        testing_md_path: Path,
+        rule: str,
+    ) -> bool:
+        """
+        Verifica daca regula noua este prea apropiata de una deja existenta
+        in fisierul categoriei.
+
+        Heuristica:
+        - egalitate dupa normalizare
+        - una o contine pe cealalta dupa normalizare
+        """
+        candidate = self.normalize_rule_text_for_comparison(rule)
+        if not candidate:
+            return False
+
+        existing_rules = self.workspace.extract_testing_rule_bullets(testing_md_path)
+
+        for existing_rule in existing_rules:
+            existing = self.normalize_rule_text_for_comparison(existing_rule)
+            if not existing:
+                continue
+
+            if candidate == existing:
+                return True
+
+            if candidate in existing or existing in candidate:
+                return True
+
+        return False
+
+
+    def validate_rule_and_reasoning_candidate(
+        self,
+        raw_response: str,
+        rule: str,
+        reasoning: str,
+        testing_md_path: Path,
+        accepted_function: str,
+    ) -> str:
+        """
+        Valideaza forma si nivelul de generalizare pentru Rule / Reasoning.
+
+        Returneaza:
+        - "Valid" daca raspunsul este acceptabil
+        - altfel, un mesaj de reformulare
+        """
+        nonempty_lines = [
+            line.strip()
+            for line in (raw_response or "").splitlines()
+            if line.strip()
+        ]
+
+        if len(nonempty_lines) != 2:
+            return (
+                "The rule does not satisfy the required form. Rewrite it.\n"
+                "Return exactly two non-empty comment lines and nothing else."
+            )
+
+        if not nonempty_lines[0].startswith("# Rule:"):
+            return (
+                "The rule does not satisfy the required form. Rewrite it.\n"
+                "The first line must start exactly with '# Rule:'."
+            )
+
+        if not nonempty_lines[1].startswith("# Reasoning:"):
+            return (
+                "The rule does not satisfy the required form. Rewrite it.\n"
+                "The second line must start exactly with '# Reasoning:'."
+            )
+
+        if not (rule or "").strip():
+            return (
+                "The rule does not satisfy the required form. Rewrite it.\n"
+                "The rule text is empty."
+            )
+
+        if not (reasoning or "").strip():
+            return (
+                "The rule does not satisfy the required form. Rewrite it.\n"
+                "The reasoning text is empty."
+            )
+
+        if self.contains_forbidden_rule_characters(rule):
+            return (
+                "The rule does not satisfy the required form. Rewrite it.\n"
+                "The rule contains forbidden characters or code-like notation.\n"
+                "Do not use digits, underscores, backticks, parentheses, brackets, braces, slashes, quotes, or operator-like symbols.\n"
+                "Use a more general wording such as threshold value, zero value, minimum accepted value, maximum rejected value, validation path, default path, override path, accepted outcome, rejected outcome, or special outcome."
+            )
+
+        forbidden_identifiers = self.extract_forbidden_rule_identifiers(
+            testing_md_path=testing_md_path,
+            accepted_function=accepted_function,
+        )
+
+        if self.rule_contains_forbidden_identifiers(rule, forbidden_identifiers):
+            return (
+                "The rule does not satisfy the required form. Rewrite it.\n"
+                "The rule still contains file-specific identifiers from the current script.\n"
+                "Do not use function names, variable names, class names, or concrete instantiated names from the code.\n"
+                "Replace them with semantic abstractions such as analyzed function, numeric parameter, counting parameter, state parameter, input data, parameter combination, threshold value, validation exception, accepted outcome, or execution path."
+            )
+
+        if self.is_rule_too_similar_to_existing_rules(
+            testing_md_path=testing_md_path,
+            rule=rule,
+        ):
+            return (
+                "The rule does not satisfy the required form. Rewrite it.\n"
+                "The rule is too close to an existing rule in the same category.\n"
+                "Rewrite it in a more general and genuinely distinct form."
+            )
+
+        return "Valid"
+
+
+    def is_weak_generic_rule(self, rule: str) -> bool:
+        """
+        Detecteaza reguli prea vagi sau prea apropiate de fallback-uri.
+
+        Aceasta nu este o validare dura de forma, ci o euristica pentru a decide
+        daca o reformulare este semantic mai buna decat alta.
+        """
+        normalized = self.normalize_rule_text_for_comparison(rule)
+
+        weak_rules = {
+            "",
+            "new distinct accepted rule in this category",
+            "new distinct rule in this category",
+            "new accepted rule in this category",
+            "new rule in this category",
+            "generic rule",
+            "test rule",
+            "new rule",
+        }
+
+        return normalized in weak_rules
+    
+
+    def score_rule_candidate(
+        self,
+        category: str,
+        rule: str,
+        reasoning: str,
+    ) -> int:
+        """
+        Atribuie un scor euristic unei perechi Rule / Reasoning.
+
+        Scop:
+        - nu blocheaza limbajul prin termeni obligatorii
+        - foloseste doar semnale moi pentru a compara doua variante valide
+        - prefera reguli mai reprezentative, mai generale si mai reconstructive
+        """
+        normalized_rule = self.normalize_rule_text_for_comparison(rule)
+        normalized_reasoning = self.normalize_rule_text_for_comparison(reasoning)
+
+        if not normalized_rule:
+            return -100
+
+        score = 0
+
+        if self.is_weak_generic_rule(rule):
+            score -= 10
+        else:
+            score += 3
+
+        word_count = len(normalized_rule.split())
+        if 6 <= word_count <= 24:
+            score += 2
+        elif word_count < 5:
+            score -= 2
+        elif word_count > 30:
+            score -= 1
+
+        causal_markers = [
+            "when",
+            "if",
+            "before",
+            "after",
+            "instead",
+            "because",
+            "produces",
+            "triggers",
+            "causes",
+            "leads to",
+            "results in",
+        ]
+        score += min(
+            3,
+            sum(1 for marker in causal_markers if marker in normalized_rule),
+        )
+
+        if category == "functional":
+            functional_markers = [
+                "observable",
+                "outcome",
+                "result",
+                "validation",
+                "exception",
+                "boundary",
+                "input",
+                "behavior",
+                "effect",
+            ]
+            structural_markers = [
+                "branch",
+                "condition",
+                "loop",
+                "path",
+                "iteration",
+                "control flow",
+                "execution path",
+            ]
+
+            functional_hits = sum(
+                1 for marker in functional_markers if marker in normalized_rule
+            )
+            structural_hits = sum(
+                1 for marker in structural_markers if marker in normalized_rule
+            )
+
+            score += min(3, functional_hits)
+
+            if structural_hits > functional_hits + 1:
+                score -= 2
+
+        elif category == "structural":
+            structural_markers = [
+                "branch",
+                "condition",
+                "loop",
+                "path",
+                "iteration",
+                "execution",
+                "control flow",
+                "validation path",
+                "default path",
+                "override path",
+            ]
+            functional_markers = [
+                "observable",
+                "outcome",
+                "result",
+                "exception",
+                "boundary",
+                "input",
+            ]
+
+            structural_hits = sum(
+                1 for marker in structural_markers if marker in normalized_rule
+            )
+            functional_hits = sum(
+                1 for marker in functional_markers if marker in normalized_rule
+            )
+
+            score += min(3, structural_hits)
+
+            if functional_hits > structural_hits + 1:
+                score -= 2
+
+        reasoning_markers = [
+            "adds",
+            "covers",
+            "boundary",
+            "validation",
+            "branch",
+            "path",
+            "loop",
+            "condition",
+            "outcome",
+            "exception",
+        ]
+        if any(marker in normalized_reasoning for marker in reasoning_markers):
+            score += 1
+
+        return score
+
+
+    def choose_better_rule_candidate(
+        self,
+        testing_md_path: Path,
+        first_rule: str,
+        first_reasoning: str,
+        refined_rule: str,
+        refined_reasoning: str,
+    ) -> tuple[str, str]:
+        """
+        Alege varianta mai buna dintre prima regula valida si varianta rafinata.
+
+        Regula:
+        - daca varianta rafinata are scor mai bun, o pastram pe ea
+        - daca scorurile sunt egale, pastram varianta care nu este slaba generic
+        - daca si asa sunt egale, pastram prima varianta valida pentru stabilitate
+        """
+        category = self.workspace.get_category_name_from_testing_md(testing_md_path)
+
+        first_score = self.score_rule_candidate(
+            category=category,
+            rule=first_rule,
+            reasoning=first_reasoning,
+        )
+        refined_score = self.score_rule_candidate(
+            category=category,
+            rule=refined_rule,
+            reasoning=refined_reasoning,
+        )
+
+        if refined_score > first_score:
+            return refined_rule, refined_reasoning
+
+        if refined_score == first_score:
+            first_is_weak = self.is_weak_generic_rule(first_rule)
+            refined_is_weak = self.is_weak_generic_rule(refined_rule)
+
+            if first_is_weak and not refined_is_weak:
+                return refined_rule, refined_reasoning
+
+        return first_rule, first_reasoning
+
+
+    def obtine_rule_si_reasoning_valid(
+        self,
+        testing_md_path: Path,
+        accepted_function: str,
+        previous_rule_response: str | None = None,
+        reformulation_feedback: str | None = None,
+        refinement_mode: bool = False,
+        max_attempts: int | None = None,
+    ) -> tuple[str | None, str | None, str | None]:
+        """
+        Obtine o pereche Rule / Reasoning valida formal.
+
+        Returneaza:
+        - raw_rule_response
+        - rule
+        - reasoning
+
+        Daca nu reuseste sa obtina o varianta valida in bugetul de incercari,
+        returneaza (None, None, None).
+        """
+        self.state = self.config.states.RULE_SI_REASONING
+
+        if max_attempts is None:
+            max_attempts = self.config.timeouts.max_corectie_attempts + 1
+
+        previous_response_local = previous_rule_response or ""
+        feedback_local = reformulation_feedback or ""
+
+        for attempt_index in range(1, max_attempts + 1):
+            prompt = self.prompt_builder.build_prompt(
+                state=self.state,
+                testing_md_path=testing_md_path,
+                accepted_function=accepted_function,
+                previous_rule_response=previous_response_local or None,
+                reformulation_feedback=feedback_local or None,
+                refinement_mode=refinement_mode,
+            )
+
+            ollama_response = self.ollama_client.generate(prompt)
+            raw_rule_response = (ollama_response.text or "").strip()
+
+            parsed_response = self.response_parser.parse_response(raw_rule_response)
+            rule, reasoning = self.response_parser.extract_rule_and_reasoning_from_comments(
+                parsed_response.metadata_comments or raw_rule_response
+            )
+
+            validation_message = self.validate_rule_and_reasoning_candidate(
+                raw_response=raw_rule_response,
+                rule=rule,
+                reasoning=reasoning,
+                testing_md_path=testing_md_path,
+                accepted_function=accepted_function,
+            )
+
+            if validation_message == "Valid":
+                return raw_rule_response, rule, (reasoning or "").strip()
+
+            self.logger.debug(
+                "Rule/Reasoning necesita reformulare. "
+                f"Motiv: {validation_message}"
+            )
+
+            if attempt_index >= max_attempts:
+                break
+
+            previous_response_local = raw_rule_response
+            feedback_local = validation_message
+            self.ollama_client.reset_context()
+
+        return None, None, None
+
+
     def solicita_rule_si_reasoning(
         self,
         testing_md_path: Path,
@@ -696,31 +1196,69 @@ class AutoTesting:
         """
         Cere separat metadatele Rule / Reasoning pentru un test deja acceptat.
 
-        Returneaza:
-        - rule
-        - reasoning
+        Flux nou:
+        1. obtine prima varianta valida formal
+        2. reseteaza contextul
+        3. cere o versiune mai reprezentativa, mai generala si mai reconstructiva
+        4. daca versiunea rafinata este valida si mai buna, o pastreaza
+        5. altfel pastreaza prima varianta valida
         """
-        self.state = self.config.states.RULE_SI_REASONING
+        fallback_rule = "New distinct accepted rule in this category"
+        fallback_reasoning = (
+            "The accepted test improved the category and added a useful new case."
+        )
 
-        prompt = self.prompt_builder.build_prompt(
-            state=self.state,
+        first_raw, first_rule, first_reasoning = self.obtine_rule_si_reasoning_valid(
             testing_md_path=testing_md_path,
             accepted_function=accepted_function,
+            refinement_mode=False,
         )
 
-        ollama_response = self.ollama_client.generate(prompt)
-        parsed_response = self.response_parser.parse_response(ollama_response.text)
+        if not first_rule or not first_reasoning:
+            return fallback_rule, fallback_reasoning
 
-        rule, reasoning = self.response_parser.extract_rule_and_reasoning_from_comments(
-            parsed_response.metadata_comments or ollama_response.text
+        first_rule = self.normalize_rule_text(
+            rule=first_rule,
+            fallback_rule=fallback_rule,
         )
 
-        rule = self.normalize_rule_text(
-            rule=rule,
-            fallback_rule="New accepted test rule in this category",
+        self.ollama_client.reset_context()
+
+        refinement_feedback = (
+            "Rewrite the previous rule and reasoning into a more representative version.\n"
+            "Keep the same testing meaning.\n"
+            "Make the rule more general, more category-faithful, and more reconstructive.\n"
+            "If another function had similar logic, this rewritten rule should naturally lead to the same kind of test.\n"
+            "Do not become vaguer.\n"
+            "Do not become more concrete."
         )
 
-        return rule, reasoning
+        refined_raw, refined_rule, refined_reasoning = self.obtine_rule_si_reasoning_valid(
+            testing_md_path=testing_md_path,
+            accepted_function=accepted_function,
+            previous_rule_response=first_raw,
+            reformulation_feedback=refinement_feedback,
+            refinement_mode=True,
+            max_attempts=2,
+        )
+
+        if not refined_rule or not refined_reasoning:
+            return first_rule, first_reasoning
+
+        refined_rule = self.normalize_rule_text(
+            rule=refined_rule,
+            fallback_rule=first_rule,
+        )
+
+        best_rule, best_reasoning = self.choose_better_rule_candidate(
+            testing_md_path=testing_md_path,
+            first_rule=first_rule,
+            first_reasoning=first_reasoning,
+            refined_rule=refined_rule,
+            refined_reasoning=refined_reasoning,
+        )
+
+        return best_rule, best_reasoning
 
 
     # ------------------------------------------------------------------
@@ -925,6 +1463,8 @@ class AutoTesting:
             )
 
         return "Propunerea poate fi acceptata."
+
+
 
 
 

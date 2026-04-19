@@ -11,6 +11,7 @@
 * [Functionalitati](#functionalitati)
 * [Flux de executie](#flux-de-executie)
 * [Utilizare](#utilizare)
+* [Imbunatatiri implementate pentru performanta si calitatea rezultatelor](#imbunatatiri-implementate-pentru-performanta-si-calitatea-rezultatelor)
 * [Autor](#autor)
 
 ## Tema: imbunatatirea testarii unitare cu IA
@@ -18,12 +19,13 @@
 [<< Cuprins](#cuprins)
 
     Utilizarea IA pentru imbunatatirea testelor unitare existente,
-    asigurand o acoperire cat mai eficienta a codului sursa (de exemplu,
-    marirea scorului de acoperire la nivel de instructiune, decizie,
-    conditie si mutatie).
+    asigurand o acoperire cat mai eficienta a codului sursa, de exemplu
+    prin cresterea branch coverage si a mutation score.
 
-    Implementarea unui sistem care sa identifice automat punctele critice
-    ale codului si sa prioritizeze testele in functie de acestea.
+    Implementarea unui sistem care identifica automat tipuri de teste
+    relevante, genereaza propuneri de teste, valideaza tehnic aceste
+    propuneri si accepta doar acele extensii care imbunatatesc efectiv
+    biblioteca de teste existenta.
 
 ## Sistem de calcul utilizat
 
@@ -52,7 +54,7 @@
 
     Tools:
 
-        pytest (executia si validarea testelor)
+        pytest (validarea si executia testelor)
         coverage (branch coverage)
         mutmut (mutation testing)
 
@@ -184,7 +186,8 @@
 
         Coverage.py, version 7.13.5 with C extension
 
-    * se creeaza fisierele de configurare necesare: pytest.ini si pyproject.toml
+    * framework-ul nu depinde de un `pytest.ini`
+    * pentru rularea mutmut, sectiunea relevanta din `pyproject.toml` este generata si rescrisa temporar de framework atunci cand este necesar
 
 **Comenzi utile de verificare manuala**
 
@@ -230,29 +233,41 @@
 
 * citeste regulile generale din `Rules.md` si specificul categoriilor din `testing_*.md`, apoi construieste prompturile corespunzatoare fiecarei etape
 
-* genereaza initial teste de baza pentru fiecare categorie definita in fisierele `testing_*.md`
+* separa fluxul in trei etape distincte:
+  * etapa 1: genereaza teste pentru regulile explicite deja existente in `testing_*.md`
+  * etapa 2: cauta teste noi care imbunatatesc fiecare categorie
+  * etapa 3: formuleaza separat regula generala si motivarea pentru testele noi acceptate
 
 * valideaza fiecare functie de test generata de AI astfel incat:
   * sa fie o functie `test_*`
+  * sa respecte forma ceruta
   * sa poata fi colectata de `pytest`
-  * sa poata fi rulata fara erori tehnice
+  * sa treaca efectiv la `pytest`
 
-* foloseste un mecanism iterativ de corectare: daca testul generat este invalid, transmite AI-ului eroarea de validare si cere o versiune corectata
+* foloseste un mecanism iterativ de corectare: daca testul generat este invalid, transmite AI-ului eroarea de validare si cere o versiune corectata a aceleiasi idei de test
 
 * masoara calitatea testelor prin:
   * **pytest** pentru validitatea suitei
   * **coverage** pentru branch coverage asupra `to_test.py`
   * **mutmut** pentru mutation testing asupra `to_test.py`
 
-* in etapa 2, accepta un test nou doar daca acesta imbunatateste scorurile categoriei curente, evaluate pe fisierul de test al categoriei respective
+* in etapa 2, accepta un test nou doar daca acesta imbunatateste scorurile categoriei curente, evaluate pe testele acceptate ale categoriei impreuna cu testul candidat din `test_propunere.py`
 
 * optimizeaza separat bibliotecile de teste pe categorii, de exemplu:
   * `test_functional.py` pentru categoria functionala
   * `test_structural.py` pentru categoria structurala
 
+* in etapa 2, modelul primeste si regulile explicite deja existente in categoria curenta, testele deja acceptate ale categoriei si o selectie de incercari respinse anterior
+
+* memoreaza propunerile respinse si foloseste hash-uri stabile pentru a evita reevaluarea aceleiasi functii deja respinse in etapa 2
+
+* permite pornirea de la zero pentru o categorie care nu are inca teste acceptate, printr-un mecanism de bootstrap
+
 * dupa acceptarea unui test nou, cere separat de la AI:
   * regula generala asociata testului
   * motivarea utilitatii testului
+
+* valideaza forma si nivelul de generalitate al regulii propuse si poate cere reformulare atunci cand regula este prea concreta, prea apropiata de regulile deja existente sau nu respecta forma ceruta
 
 * adauga regula acceptata in fisierul `testing_*.md` al categoriei curente
 
@@ -265,9 +280,11 @@
 
 * elimina automat propunerile care nu aduc imbunatatire, pentru a reduce redundanta si zgomotul din library
 
-* reseteaza contextul AI intre etape sau categorii pentru a evita contaminarea contextului cu informatii irelevante
+* reseteaza contextul AI intre etape, intre categorii si intre solicitari sensibile, precum corectiile sau formularile separate ale regulilor, pentru a evita contaminarea contextului cu informatii irelevante
 
-* arhiveaza la final fisierul `to_test.py` si toate fisierele `test_*.py` intr-un subfolder numerotat si datat din `arh/`
+* evita costurile inutile: daca `pytest` nu este curat, nu mai ruleaza `coverage` si `mutmut` pentru acea evaluare
+
+* arhiveaza la final fisierul `to_test.py` si fisierele finale `test_*.py` intr-un subfolder numerotat si datat din `arh/`, cu excluderea fisierului temporar `test_propunere.py`
 
 * realizeaza un proces de testare automata asistata de AI, orientat spre:
   * generare de teste `pytest`
@@ -285,8 +302,9 @@
 3. Se genereaza testele initiale pentru regulile explicite existente in `testing_*.md`.
 4. Se cauta teste noi pentru fiecare categorie.
 5. Pentru fiecare test nou acceptat, se cere separat regula si motivarea.
-6. Se actualizeaza fisierele `test_*.py`, `testing_*.md` si `Logs.jsonl`.
-7. Se arhiveaza rezultatele si se curata fisierele si folderele temporare.
+6. Regula propusa este validata formal si poate fi reformulata daca este prea concreta sau daca nu respecta cerintele.
+7. Se actualizeaza fisierele `test_*.py`, `testing_*.md` si `Logs.jsonl`.
+8. Se arhiveaza rezultatele finale si se curata fisierele si folderele temporare.
 
 ## Utilizare
 
@@ -302,9 +320,37 @@
 
 * In fisierele `testing_*.md` se construieste treptat biblioteca de reguli de testare pe categorii.
 
-* In folderul `arh/` se salveaza, intr-un subfolder numerotat si datat, fisierele `to_test.py` si `test_*.py`.
+* In folderul `arh/` se salveaza, intr-un subfolder numerotat si datat, fisierul `to_test.py` si fisierele finale `test_*.py`.
 
 * In folderul `logs/` se salveaza logurile tehnice ale framework-ului si interactiunile brute cu Ollama, daca debugging-ul este activ.
+
+## Imbunatatiri implementate pentru performanta si calitatea rezultatelor
+
+[<< Cuprins](#cuprins)
+
+* a fost separata arhitectura pe module specializate pentru orchestrare, prompturi, validare, scorare, logging, arhivare si lucru cu fisierele
+* a fost separat clar fluxul in etapa unu, etapa doi si etapa trei, fiecare cu scop propriu
+* in etapa unu se genereaza teste pentru regulile explicite deja existente in fisierele categoriei
+* in etapa doi se cauta doar teste noi care aduc o imbunatatire reala categoriei curente
+* in etapa trei se cere separat formularea regulii generale si a motivarii pentru testele deja acceptate
+* contextul AI este resetat in punctele sensibile ale fluxului pentru a reduce contaminarea dintre solicitari diferite
+* corectiile sunt formulate separat, astfel incat modelul sa repare aceeasi idee de test si sa nu schimbe semnificatia semantica
+* sunt folosite mesaje de validare mai utile si mai compacte, pentru a ajuta modelul sa corecteze mai bine raspunsurile invalide
+* fiecare test generat este validat strict, astfel incat sa fie acceptate doar teste care trec efectiv prin `pytest`
+* fiecare categorie este optimizata independent, astfel incat functionalul si structuralul sa evolueze separat
+* un test nou este evaluat impreuna cu biblioteca deja acceptata a categoriei sale, nu izolat
+* a fost introdus un mecanism de evitare a erorilor pentru categoriile care nu au inca teste acceptate
+* este evitata reevaluarea aceleiasi propuneri deja respinse prin memorarea ei si folosirea unui hash stabil
+* modelului ii sunt aratate incercarile respinse anterior, pentru a reduce repetitiile si a forta cautarea de idei noi
+* modelului ii sunt aratate si regulile explicite deja existente din categorie, pentru a evita dublurile semantice
+* in etapa doi sunt acceptate doar propunerile care imbunatatesc categoria fara sa strice scorurile deja obtinute
+* s-a stabilit o ordine pentru 3 prioritati in scrierea functiilor de  testare: corectitudinea & validitatea, reprezentabivitatea / originalitatea, simplitatea
+* cautarea pe o categorie este oprita dupa un numar de iteratii consecutive fara imbunatatire, pentru a limita consumul inutil
+* `coverage` si `mutmut` nu mai sunt rulate atunci cand `pytest` nu este curat, reducand costul evaluarilor inutile
+* cererea de test este separata de cererea de regula, pentru a nu amesteca generarea codului cu abstractizarea regulii
+* forma regulii generale este validata, iar regulile prea concrete, prea apropiate de cod sau prea apropiate de reguli deja existente pot fi reformulate
+* fisierul temporar `test_propunere.py` este exclus din arhivare, astfel incat arhiva sa contina doar artefactele finale relevante
+* logarea tehnica a fost imbunatatita, astfel incat motivele de respingere si evolutia scorurilor sa poata fi urmarite mai usor
 
 ## Autor
 

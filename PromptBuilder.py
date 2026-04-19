@@ -140,7 +140,11 @@ class PromptBuilder:
             rules_rule_and_reasoning,
         )
 
-    def _get_common_category_context(self, testing_md_path: Path) -> dict[str, str | int]:
+
+    def _get_common_category_context(
+        self,
+        testing_md_path: Path,
+    ) -> dict[str, str | int | list[str]]:
         """
         Construieste contextul comun unei categorii de testare.
 
@@ -150,6 +154,7 @@ class PromptBuilder:
         - codul sursa din to_test.py
         - continutul curent al fisierului de test asociat
         - numarul de bullet-uri explicite existente
+        - lista bullet-urilor explicite existente
         """
         category = self.workspace.get_category_name_from_testing_md(testing_md_path)
         general_category_rules = self.workspace.extract_general_category_rules(
@@ -159,9 +164,10 @@ class PromptBuilder:
         current_category_tests = self.workspace.read_category_test_file_content(
             testing_md_path
         )
-        explicit_bullets_count = self.workspace.count_testing_rule_bullets(
+        explicit_bullets = self.workspace.extract_testing_rule_bullets(
             testing_md_path
         )
+        explicit_bullets_count = len(explicit_bullets)
 
         return {
             "category": category,
@@ -169,7 +175,27 @@ class PromptBuilder:
             "source_code": source_code,
             "current_category_tests": current_category_tests,
             "explicit_bullets_count": explicit_bullets_count,
+            "explicit_bullets": explicit_bullets,
         }
+    
+
+    def _build_existing_explicit_rules_section(
+        self,
+        explicit_bullets: list[str] | None,
+    ) -> str:
+        """
+        Construieste o sectiune separata cu regulile explicite deja existente
+        in fisierul categoriei.
+        """
+        if not explicit_bullets:
+            return "Existing explicit rules in this category:\n(none)"
+
+        lines = ["Existing explicit rules in this category:"]
+        for index, bullet in enumerate(explicit_bullets, start=1):
+            lines.append(f"{index}. {bullet}")
+
+        return "\n".join(lines).strip()
+
 
     # ------------------------------------------------------------------
     # Prompt etapa 1 - teste initiale
@@ -221,13 +247,18 @@ class PromptBuilder:
 
         Noua logica:
         - modelul vede testele deja acceptate in categorie
+        - modelul vede si regulile explicite deja existente in fisier
         - modelul vede si incercarile deja respinse, ca sa nu le repete
         - promptul cere explicit o regula cu adevarat noua, nu doar o variatie
-        superficiala a unei idei deja esuate
+        superficiala a unei idei deja esuate sau a unei reguli deja existente
         """
         _, rules_new_tests, _ = self._get_rules_sections()
         common = self._get_common_category_context(testing_md_path)
         format_instructions = self.build_format_instructions()
+
+        existing_rules_section = self._build_existing_explicit_rules_section(
+            explicit_bullets=common["explicit_bullets"] if isinstance(common["explicit_bullets"], list) else []
+        )
         rejected_attempts_section = self._build_rejected_attempts_section(
             failed_attempts=failed_attempts
         )
@@ -241,9 +272,11 @@ class PromptBuilder:
                 f"{format_instructions}"
                 "Important for this request:\n"
                 "- Propose a genuinely new rule in this category.\n"
+                "- The new rule must be genuinely distinct from the existing explicit rules shown below.\n"
                 "- Do not repeat a previously rejected idea.\n"
                 "- Do not make only a superficial variation of a rejected idea.\n"
-                "- If a rejected attempt hit the same path or behavior, choose a meaningfully different one.\n"
+                "- Do not make only a narrower restatement, cosmetic variation, or concrete specialization of an existing explicit rule.\n"
+                "- Prefer a different observable behavior, branch outcome, condition outcome, loop behavior, or execution path from the already accepted tests, existing explicit rules, and rejected attempts.\n"
                 "- Prefer a test that changes the measured score for this category.\n"
             ).strip(),
             (
@@ -251,6 +284,7 @@ class PromptBuilder:
                 f"Existing explicit bullets in this category: {common['explicit_bullets_count']}\n"
                 f"Next bullet number if accepted: {next_bullet_number}"
             ),
+            existing_rules_section,
             (
                 "Current accepted tests for this category:\n"
                 f"```python\n{common['current_category_tests']}\n```"
@@ -269,13 +303,23 @@ class PromptBuilder:
 
 
     def build_rule_and_reasoning_prompt(
-    self,
-    testing_md_path: Path,
-    accepted_function: str,
-) -> str:
+        self,
+        testing_md_path: Path,
+        accepted_function: str,
+        previous_rule_response: str | None = None,
+        reformulation_feedback: str | None = None,
+        refinement_mode: bool = False,
+    ) -> str:
         """
-        Construieste promptul separat pentru cererea metadatelor Rule / Reasoning
+        Construieste promptul pentru cererea metadatelor Rule / Reasoning
         dupa ce testul a fost deja acceptat.
+
+        Noua logica:
+        - modelul vede si regulile explicite deja existente din categorie
+        - daca o formulare anterioara a regulii a fost respinsa, primeste
+        raspunsul anterior si motivul reformularii
+        - daca refinement_mode este activ, modelul trebuie sa rescrie o regula
+        deja valida intr-o forma mai reprezentativa si mai reconstructiva
         """
         _, _, rules_rule_and_reasoning = self._get_rules_sections()
         common = self._get_common_category_context(testing_md_path)
@@ -285,14 +329,71 @@ class PromptBuilder:
                 "accepted_function este necesara pentru construirea promptului de regula si motivare."
             )
 
-        prompt = (
-            f"{rules_rule_and_reasoning}\n\n"
-            f"{common['general_category_rules']}\n\n"
-            f"Category: {common['category']}\n\n"
-            f"Accepted test function:\n```python\n{accepted_function}\n```"
-        ).strip()
+        existing_rules_section = self._build_existing_explicit_rules_section(
+            explicit_bullets=(
+                common["explicit_bullets"]
+                if isinstance(common["explicit_bullets"], list)
+                else []
+            )
+        )
 
-        return prompt
+        prompt_parts: list[str] = [
+            rules_rule_and_reasoning,
+            common["general_category_rules"],
+            f"Category: {common['category']}",
+            existing_rules_section,
+            (
+                "Accepted test function:\n"
+                f"```python\n{accepted_function}\n```"
+            ),
+        ]
+
+        if refinement_mode:
+            prompt_parts.append(
+                (
+                    "Rewrite the previous rule and reasoning into a more representative version.\n"
+                    "Keep the same testing meaning.\n"
+                    "Make the new rule more general, more category-faithful, and more reconstructive.\n"
+                    "A good rewritten rule should help recover the same kind of test for another function with similar logic.\n"
+                    "Do not become vaguer.\n"
+                    "Do not become more concrete.\n"
+                    "Keep the rule distinct from the existing explicit rules shown above."
+                )
+            )
+
+            if previous_rule_response:
+                prompt_parts.append(
+                    "Previous rule-and-reasoning response to improve:\n"
+                    f"```text\n{previous_rule_response.strip()}\n```"
+                )
+
+            if reformulation_feedback:
+                prompt_parts.append(
+                    "Improvement goal:\n"
+                    f"{reformulation_feedback.strip()}"
+                )
+
+        elif previous_rule_response or reformulation_feedback:
+            prompt_parts.append(
+                (
+                    "The rule does not satisfy the required form. Rewrite it.\n"
+                    "Use the rule-and-reasoning instructions above again and produce a stricter generalization."
+                )
+            )
+
+            if previous_rule_response:
+                prompt_parts.append(
+                    "Previous rule-and-reasoning response:\n"
+                    f"```text\n{previous_rule_response.strip()}\n```"
+                )
+
+            if reformulation_feedback:
+                prompt_parts.append(
+                    "Reformulation feedback:\n"
+                    f"{reformulation_feedback.strip()}"
+                )
+
+        return "\n\n".join(part.strip() for part in prompt_parts if part.strip())
 
 
     # ------------------------------------------------------------------
@@ -313,6 +414,8 @@ class PromptBuilder:
         - modelul trebuie sa corecteze exact functia respinsa, nu sa schimbe ideea
         - eroarea de validare este data explicit ca restrictie concreta
         - in etapa 2 pastram si testele deja acceptate in categorie
+        - in etapa 2 pastram si regulile explicite deja existente, pentru ca
+        propunerea corectata sa ramana distincta fata de ele
         """
         if not validation_error:
             raise ValueError(
@@ -370,6 +473,10 @@ class PromptBuilder:
         _, rules_new_tests, _ = self._get_rules_sections()
         next_bullet_number = int(common["explicit_bullets_count"]) + 1
 
+        existing_rules_section = self._build_existing_explicit_rules_section(
+            explicit_bullets=common["explicit_bullets"] if isinstance(common["explicit_bullets"], list) else []
+        )
+
         prompt_parts = [
             rules_new_tests,
             common["general_category_rules"],
@@ -380,6 +487,7 @@ class PromptBuilder:
                 f"Existing explicit bullets in this category: {common['explicit_bullets_count']}\n"
                 f"Next bullet number if accepted: {next_bullet_number}"
             ),
+            existing_rules_section,
             (
                 "Current accepted tests for this category:\n"
                 f"```python\n{common['current_category_tests']}\n```"
@@ -411,13 +519,12 @@ class PromptBuilder:
         validation_error: str | None = None,
         accepted_function: str | None = None,
         failed_attempts: list[tuple[str, str]] | None = None,
+        previous_rule_response: str | None = None,
+        reformulation_feedback: str | None = None,
+        refinement_mode: bool = False,
     ) -> str:
         """
         Construieste promptul potrivit in functie de starea curenta a fluxului.
-
-        Nou:
-        - failed_attempts este folosit in etapa 2 pentru a evita repetarea
-        propunerilor deja respinse.
         """
         states = self.config.states
 
@@ -457,6 +564,9 @@ class PromptBuilder:
             return self.build_rule_and_reasoning_prompt(
                 testing_md_path=testing_md_path,
                 accepted_function=accepted_function,
+                previous_rule_response=previous_rule_response,
+                reformulation_feedback=reformulation_feedback,
+                refinement_mode=refinement_mode,
             )
 
         raise ValueError("Stare necunoscuta pentru construirea promptului.")
@@ -475,6 +585,9 @@ class PromptBuilder:
         validation_error: str | None = None,
         accepted_function: str | None = None,
         failed_attempts: list[tuple[str, str]] | None = None,
+        previous_rule_response: str | None = None,
+        reformulation_feedback: str | None = None,
+        refinement_mode: bool = False,
         preview_length: int = 300,
     ) -> str:
         """
@@ -488,6 +601,9 @@ class PromptBuilder:
             validation_error=validation_error,
             accepted_function=accepted_function,
             failed_attempts=failed_attempts,
+            previous_rule_response=previous_rule_response,
+            reformulation_feedback=reformulation_feedback,
+            refinement_mode=refinement_mode,
         )
 
         compact_prompt = full_prompt.replace("\n", " ").strip()
