@@ -7,7 +7,9 @@
 * [Ollama](#ollama)
 * [Git](#git)
 * [Utilitare](#utilitare)
-* [Testarea functionarii initiale](#testarea-functionarii-initiale)
+* [Testarea manuala a suitei curente](#testarea-manuala-a-suitei-curente)
+* [Testarea functionarii framework-ului](#testarea-functionarii-framework-ului)
+* [Structura fisierelor de instructiuni](#structura-fisierelor-de-instructiuni)
 * [Functionalitati](#functionalitati)
 * [Flux de executie](#flux-de-executie)
 * [Utilizare](#utilizare)
@@ -22,10 +24,15 @@
     asigurand o acoperire cat mai eficienta a codului sursa, de exemplu
     prin cresterea branch coverage si a mutation score.
 
-    Implementarea unui sistem care identifica automat tipuri de teste
-    relevante, genereaza propuneri de teste, valideaza tehnic aceste
-    propuneri si accepta doar acele extensii care imbunatatesc efectiv
-    biblioteca de teste existenta.
+    Implementarea unui sistem care identifica automat zone relevante de
+    testare unitara, genereaza propuneri de teste, valideaza tehnic aceste
+    propuneri si accepta doar extensiile care imbunatatesc efectiv biblioteca
+    de teste existenta.
+
+    Scopul proiectului este generarea de teste unitare valide pentru
+    comportamentul curent al codului. Testele acceptate trebuie sa treaca la
+    pytest. Sistemul nu are ca obiectiv principal generarea de teste care pica
+    pentru a demonstra buguri de runtime.
 
 ## Sistem de calcul utilizat
 
@@ -46,17 +53,32 @@
 
 [<< Cuprins](#cuprins)
 
-    Sistem bazat pe AI local (offline):
+    Sistem bazat pe AI local, rulat offline:
 
-        Ollama (agent AI local)
-        Qwen2.5-Coder 7B (modelul folosit pentru generare)
-        AutoTesting.py (orchestratorul principal al framework-ului)
+        Ollama
+        Qwen2.5-Coder 7B
+        AutoTesting.py
 
-    Tools:
+    Tools folosite pentru evaluarea testelor:
 
-        pytest (validarea si executia testelor)
-        coverage (branch coverage)
-        mutmut (mutation testing)
+        pytest
+        coverage cu branch coverage
+        mutmut
+
+    Componente principale:
+
+        AutoTesting.py       - orchestratorul principal
+        Config.py            - configurare centrala
+        PromptBuilder.py     - construirea prompturilor
+        OllamaClient.py      - comunicarea cu API-ul Ollama
+        ResponseParser.py    - parsarea raspunsurilor AI
+        TestValidator.py     - validarea propunerilor de test
+        TestsPerformance.py  - scorare pytest, coverage si mutmut
+        WorkspaceManager.py  - operatii pe fisierele proiectului
+        Archive.py           - arhivarea artefactelor finale
+        Cleanup.py           - curatarea artefactelor temporare
+        Logger.py            - logging tehnic si istoric reguli
+        manual_testing.py    - verificare manuala pytest, coverage si mutmut
 
 ## Ollama
 
@@ -64,33 +86,19 @@
 
 * **INSTALARE**
 
-    curl -fsSL https://ollama.com/install.sh | sh
+        curl -fsSL https://ollama.com/install.sh | sh
 
-        The Ollama API is now available at 127.0.0.1:11434.
-        Install complete. Run "ollama" from the command line.
-        AMD GPU ready.
+        ollama -v
 
-    ollama -v
+        ollama pull qwen2.5-coder:7b
 
-        ollama version is 0.20.2
+        sudo systemctl status ollama
 
-    ollama pull qwen2.5-coder:7b
-
-        verifying sha256 digest
-        writing manifest
-        success
-
-    sudo systemctl status ollama
-
-        ollama.service - Ollama Service
-        Loaded: loaded (/etc/systemd/system/ollama.service; enabled)
-        Active: active (running)
-
-        // Ollama ruleaza ca serviciu systemd
+    Ollama ruleaza ca serviciu systemd.
 
 * **CONFIGURARE**
 
-    **Optional: marim contextul modelului**
+    **Optional: marirea contextului modelului**
 
         sudo systemctl edit ollama
 
@@ -101,7 +109,7 @@
         sudo systemctl restart ollama
         sudo systemctl status ollama
 
-    **Permanentizam PATH pentru utilitarele instalate user-local:**
+    **Permanentizarea PATH pentru utilitarele instalate user-local**
 
         echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
         source ~/.bashrc
@@ -109,62 +117,58 @@
     Framework-ul comunica direct cu API-ul Ollama prin HTTP.
     Modelul folosit implicit este configurat in `Config.py`.
 
+    Instructiunile transmise catre model sunt formulate in limba engleza,
+    pentru a creste calitatea raspunsurilor generate de modelul local.
+
 ## Git
 
 [<< Cuprins](#cuprins)
 
 * **INSTALARE**
 
-    sudo apt install git
+        sudo apt install git
 
-    git -v
+        git -v
 
-        git version 2.43.0
+        git init
 
-    git init
+        git remote add origin https://github.com/CondruzFilipGabriel/TSS.git
 
-        Initialized empty Git repository in /home/f/Desktop/TSS/.git/
+        git remote -v
 
-    git remote add origin https://github.com/CondruzFilipGabriel/TSS.git
+        ssh-keygen -t ed25519 -C "*@*.*"
 
-    git remote -v
+        eval "$(ssh-agent -s)"
 
-        origin  https://github.com/CondruzFilipGabriel/TSS.git (fetch)
-        origin  https://github.com/CondruzFilipGabriel/TSS.git (push)
+        ssh-add ~/.ssh/id_ed25519
 
-    ssh-keygen -t ed25519 -C "*@*.*"
+        cat ~/.ssh/id_ed25519.pub
 
-    eval "$(ssh-agent -s)"
+    Cheia publica se adauga in GitHub cu drepturi de scriere.
 
-    ssh-add ~/.ssh/id_ed25519
+        git add .
 
-    cat ~/.ssh/id_ed25519.pub
+        git branch -M main
 
-    (*copiem cheia pe GitHub si o adaugam cu drepturi de scriere*)
+        git commit -m "Initial commit"
 
-    git add .
+        git remote set-url origin git@github.com:CondruzFilipGabriel/TSS.git
 
-    git branch -M main
+        git config --global user.name "*******"
 
-    git commit -m "Initial commit"
+        git config --global user.email "*@*.*"
 
-    git remote set-url origin git@github.com:CondruzFilipGabriel/TSS.git
-
-    git config --global user.name "*******"
-
-    git config --global user.email "*@*.*"
-
-    git push -u origin main
+        git push -u origin main
 
 * **UPDATE / UTILIZARE**
 
-    git status
+        git status
 
-    git add .
+        git add .
 
-    git commit -m "Eticheta privind noul update"
+        git commit -m "Eticheta privind noul update"
 
-    git push
+        git push
 
 ## Utilitare
 
@@ -172,45 +176,149 @@
 
 **pytest, mutmut si coverage**
 
-    python3 -m pip install --user --break-system-packages --upgrade --force-reinstall pytest mutmut coverage
+        python3 -m pip install --user --break-system-packages --upgrade --force-reinstall pytest mutmut coverage
 
-    pytest --version
+        pytest --version
 
-        pytest 9.0.2
+        mutmut --version
 
-    mutmut --version
+        coverage --version
 
-        mutmut, version 3.5.0
+**Comenzi utile pentru verificare manuala simpla**
 
-    coverage --version
+        python3 -m pytest -q
 
-        Coverage.py, version 7.13.5 with C extension
+        python3 -m coverage erase
+        python3 -m coverage run --branch -m pytest -q
+        python3 -m coverage report -m --include=to_test.py
 
-**Comenzi utile pentru verificare manuala**
+        mutmut run
+        mutmut results
 
-    python3 -m pytest -q
+    Pentru verificare manuala controlata este recomandat scriptul
+    `manual_testing.py`, deoarece selecteaza fisierele de test si configureaza
+    temporar mutmut in acelasi stil ca framework-ul automat.
 
-    python3 -m coverage erase
-    python3 -m coverage run --branch -m pytest -q
-    python3 -m coverage report -m --include=to_test.py
-
-    mutmut run
-    mutmut results
-
-## Testarea functionarii initiale
+## Testarea manuala a suitei curente
 
 [<< Cuprins](#cuprins)
 
-    cd /****/TSS
+    Scriptul `manual_testing.py` ruleaza manual, asupra lui `to_test.py`,
+    urmatoarele verificari:
 
-    python3 AutoTesting.py
+        pytest
+        coverage cu branch coverage
+        mutmut
+
+    Scriptul foloseste fisierele `test_*.py` din folderul curent si exclude
+    automat fisierul temporar `test_propunere.py` atunci cand selectia este `all`.
+
+    Comenzi:
+
+        python3 manual_testing.py
+
+        python3 manual_testing.py all
+
+        python3 manual_testing.py functional
+
+        python3 manual_testing.py structural
+
+        python3 manual_testing.py functional --clean-after
+
+    Selectii disponibile:
+
+        all
+            Ruleaza toate fisierele finale `test_*.py`,
+            cu excluderea lui `test_propunere.py`.
+
+        functional
+            Ruleaza `test_functional.py`.
+
+        structural
+            Ruleaza `test_structural.py`.
+
+        orice alta categorie
+            Ruleaza `test_<categorie>.py`, daca fisierul exista si contine
+            functii de test.
+
+    Scriptul curata automat artefactele runtime inainte de rulare:
+
+        .mutmut-cache
+        mutants/
+        __manual_testing_pyproject_backup__.tmp
+        .pytest_cache/
+        .coverage
+        __pycache__/
+
+    Optiunea `--clean-after` executa aceeasi curatare si dupa rulare.
+    Pentru compatibilitate cu o posibila tastare gresita este acceptat si
+    aliasul `--clean-afeter`.
+
+## Testarea functionarii framework-ului
+
+[<< Cuprins](#cuprins)
+
+        cd /****/TSS
+
+        python3 AutoTesting.py
 
     La final se verifica:
+
         - continutul fisierelor test_*.py
         - regulile nou adaugate in testing_*.md
         - istoricul din Logs.jsonl
         - arhivarea in folderul arh/
         - logurile tehnice din folderul logs/
+
+## Structura fisierelor de instructiuni
+
+[<< Cuprins](#cuprins)
+
+    Framework-ul foloseste doua niveluri de instructiuni pentru modelul AI.
+
+    1. `Rules.md`
+
+        Contine reguli generale, valabile pentru toate categoriile:
+
+            - formatul raspunsului
+            - cerinta de a returna o singura functie pytest
+            - modul de construire a testelor initiale
+            - modul de construire a testelor noi
+            - prioritatile generale
+            - regulile generale pentru formularea `Rule` si `Reasoning`
+
+        `Rules.md` este formulat concis si afirmativ, pentru a reduce
+        ambiguitatea pentru modelul local. Scopul este indicarea formei
+        corecte a raspunsului, nu enumerarea tuturor formelor gresite.
+
+    2. `testing_*.md`
+
+        Fiecare fisier defineste o categorie de testare.
+
+        Exemple:
+
+            testing_functional.md
+            testing_structural.md
+
+        Aceste fisiere contin:
+
+            - sensul categoriei
+            - vocabularul abstract recomandat pentru regulile acelei categorii
+            - sub-categorii sau zone generale de cautare specifice categoriei
+            - regulile numerotate deja acceptate
+
+        Zonele de cautare sunt surse de idei, nu reguli acceptate.
+        Regulile acceptate sunt liniile numerotate.
+
+    Modelul poate folosi valori concrete in testul generat, dar regula
+    abstracta salvata ulterior in `testing_*.md` trebuie sa foloseasca termeni
+    semantici, nu valori concrete, nume de functii, nume de variabile sau
+    siruri concrete de rezultat.
+
+    Daca un test nou este acceptat, dar modelul nu poate formula o regula
+    valida si reutilizabila, testul ramane in fisierul categoriei. In acest caz
+    regula nu este adaugata in `testing_*.md`, pentru a evita poluarea
+    bibliotecii de reguli cu fallback-uri generice.
 
 ## Functionalitati
 
@@ -228,20 +336,30 @@
 
 * comunica direct cu Ollama prin API HTTP pentru generarea automata de teste Python
 
-* citeste regulile generale din `Rules.md` si specificul categoriilor din `testing_*.md`, apoi construieste prompturile corespunzatoare fiecarei etape
+* foloseste `Rules.md` pentru regulile generale si `testing_*.md` pentru instructiunile specifice fiecarei categorii
 
-* separa fluxul in trei etape distincte:
-  * etapa 1: genereaza teste pentru regulile explicite deja existente in `testing_*.md`
+* foloseste prompturi compacte si afirmative, adaptate pentru un model local de dimensiune redusa
+
+* separa promptul general de promptul categoriei, astfel incat conceptele functionale si structurale sa nu fie amestecate
+
+* separa fluxul in trei etape logice:
+  * etapa 1: genereaza teste pentru regulile numerotate deja existente in `testing_*.md`
   * etapa 2: cauta teste noi care imbunatatesc fiecare categorie
   * etapa 3: formuleaza separat regula generala si motivarea pentru testele noi acceptate
 
 * valideaza fiecare functie de test generata de AI astfel incat:
   * sa fie o functie `test_*`
   * sa respecte forma ceruta
+  * sa contina o singura functie de test
+  * sa nu contina cod suplimentar in afara functiei
   * sa poata fi colectata de `pytest`
   * sa treaca efectiv la `pytest`
 
-* foloseste un mecanism iterativ de corectare: daca testul generat este invalid, transmite AI-ului eroarea de validare si cere o versiune corectata a aceleiasi idei de test
+* foloseste un mecanism iterativ de corectare: daca testul generat este invalid, transmite AI-ului eroarea de validare si cere o versiune corectata
+
+* in etapa 1, corectarea ramane legata de regula numerotata ceruta
+
+* in etapa 2, corectarea ramane in aceeasi categorie si in aceeasi zona generala de testare, dar poate ajusta valorile concrete, rezultatul asteptat sau asertiunea
 
 * masoara calitatea testelor prin:
   * **pytest** pentru validitatea suitei
@@ -254,7 +372,15 @@
   * `test_functional.py` pentru categoria functionala
   * `test_structural.py` pentru categoria structurala
 
-* in etapa 2, modelul primeste si regulile explicite deja existente in categoria curenta, testele deja acceptate ale categoriei si o selectie de incercari respinse anterior
+* in etapa 2, modelul primeste:
+  * codul sursa din `to_test.py`
+  * instructiunile generale din `Rules.md`
+  * instructiunile categoriei curente din `testing_*.md`
+  * regulile numerotate deja existente in categoria curenta
+  * testele deja acceptate ale categoriei
+  * o selectie de incercari respinse anterior
+
+* cautarea testelor noi vizeaza zone insuficient acoperite din categoria curenta, nu doar inceputul sau finalul codului
 
 * memoreaza propunerile respinse si foloseste hash-uri stabile pentru a evita reevaluarea aceleiasi functii deja respinse in etapa 2
 
@@ -264,26 +390,37 @@
   * regula generala asociata testului
   * motivarea utilitatii testului
 
-* valideaza forma si nivelul de generalitate al regulii propuse si poate cere reformulare atunci cand regula este prea concreta, prea apropiata de regulile deja existente sau nu respecta forma ceruta
+* validarea regulii accepta punctuatie simpla in limba engleza:
+  * virgula
+  * punct
+  * punct si virgula
+  * doua puncte
+  * liniuta
 
-* adauga regula acceptata in fisierul `testing_*.md` al categoriei curente
+* validarea regulii blocheaza formularea goala, formularea generica si termenii concreti evidenti din codul curent
 
-* inregistreaza in `Logs.jsonl` fiecare regula noua acceptata, impreuna cu:
+* daca regula valida nu poate fi formulata, testul acceptat ramane in `test_*.py`, dar nu se adauga un bullet nou in `testing_*.md`
+
+* inregistreaza in `Logs.jsonl` regulile noi acceptate, impreuna cu:
   * categoria
   * regula
   * motivarea
   * imbunatatirea obtinuta
   * data si autorul
 
-* elimina automat propunerile care nu aduc imbunatatire, pentru a reduce redundanta si zgomotul din library
+* elimina automat propunerile care nu aduc imbunatatire, pentru a reduce redundanta si zgomotul din biblioteca de teste
 
 * reseteaza contextul AI intre etape, intre categorii si intre solicitari sensibile, precum corectiile sau formularile separate ale regulilor, pentru a evita contaminarea contextului cu informatii irelevante
 
 * evita costurile inutile: daca `pytest` nu este curat, nu mai ruleaza `coverage` si `mutmut` pentru acea evaluare
 
+* curata workspace-ul la inceputul si la finalul rularii automate
+
 * arhiveaza la final fisierul `to_test.py` si fisierele finale `test_*.py` intr-un subfolder numerotat si datat din `arh/`, cu excluderea fisierului temporar `test_propunere.py`
 
-* realizeaza un proces de testare automata asistata de AI, orientat spre:
+* include un script separat, `manual_testing.py`, pentru verificarea manuala a scorurilor pytest, coverage si mutmut pe toate testele sau pe o categorie selectata
+
+* realizeaza un proces de testare unitara asistata de AI, orientat spre:
   * generare de teste `pytest`
   * validare tehnica automata
   * crestere progresiva a branch coverage
@@ -296,24 +433,47 @@
 
 1. Se curata workspace-ul de fisierele si folderele temporare.
 2. Se verifica structura minima a proiectului.
-3. Se genereaza testele initiale pentru regulile explicite existente in `testing_*.md`.
-4. Se cauta teste noi pentru fiecare categorie.
-5. Pentru fiecare test nou acceptat, se cere separat regula si motivarea.
-6. Regula propusa este validata formal si poate fi reformulata daca este prea concreta sau daca nu respecta cerintele.
-7. Se actualizeaza fisierele `test_*.py`, `testing_*.md` si `Logs.jsonl`.
-8. Se arhiveaza rezultatele finale si se curata fisierele si folderele temporare.
+3. Se identifica fisierele `testing_*.md` si se creeaza fisierele `test_*.py` lipsa.
+4. Se genereaza testele initiale pentru regulile numerotate existente in `testing_*.md`.
+5. Se marcheaza finalul testelor initiale in fisierele de test.
+6. Se cauta teste noi pentru fiecare categorie.
+7. Pentru fiecare test candidat se ruleaza validarea tehnica.
+8. Pentru fiecare test valid se evalueaza scorurile pe categoria curenta plus `test_propunere.py`.
+9. Daca scorurile se imbunatatesc fara regresie, testul este acceptat in fisierul categoriei.
+10. Pentru fiecare test nou acceptat, se cere separat regula si motivarea.
+11. Daca regula este valida si negenerica, aceasta este salvata in `Logs.jsonl` si adaugata in `testing_*.md`.
+12. Daca regula nu poate fi formulata valid, testul ramane acceptat, dar nu se adauga regula in `testing_*.md`.
+13. Se arhiveaza rezultatele finale.
+14. Se curata fisierele si folderele temporare.
+15. Se afiseaza regulile noi adaugate in sesiunea curenta.
 
 ## Utilizare
 
 [<< Cuprins](#cuprins)
 
-* **Pornire framework (in folderul /****/TSS)**
+* **Pornire framework automat, in folderul proiectului**
 
         python3 AutoTesting.py
 
-* La final sunt afisate regulile noi adaugate in sesiunea curenta.
+* **Verificare manuala globala**
 
-* In fisierul `Logs.jsonl` se regasesc toate regulile acceptate de-a lungul rularilor.
+        python3 manual_testing.py
+
+* **Verificare manuala pe categoria functionala**
+
+        python3 manual_testing.py functional
+
+* **Verificare manuala pe categoria structurala**
+
+        python3 manual_testing.py structural
+
+* **Verificare manuala cu stergerea artefactelor dupa rulare**
+
+        python3 manual_testing.py all --clean-after
+
+* La finalul rularii automate sunt afisate regulile noi adaugate in sesiunea curenta.
+
+* In fisierul `Logs.jsonl` se regasesc regulile acceptate de-a lungul rularilor.
 
 * In fisierele `testing_*.md` se construieste treptat biblioteca de reguli de testare pe categorii.
 
@@ -330,8 +490,19 @@
 * in etapa unu se genereaza teste pentru regulile explicite deja existente in fisierele categoriei
 * in etapa doi se cauta doar teste noi care aduc o imbunatatire reala categoriei curente
 * in etapa trei se cere separat formularea regulii generale si a motivarii pentru testele deja acceptate
+* instructiunile generale au fost mutate in `Rules.md`, iar instructiunile specifice categoriilor au fost pastrate in fisierele `testing_*.md`
+* `Rules.md` a fost redus la reguli generale concise si afirmative, pentru a evita supraincarcarea modelului local
+* fisierele `testing_functional.md` si `testing_structural.md` contin sensul categoriei, vocabularul abstract si zonele de cautare specifice categoriei
+* zonele de cautare din fisierele categoriei sunt folosite ca surse de idei, nu ca reguli deja acceptate
+* modelul este incurajat sa caute zone insuficient acoperite in categoria curenta, fara a favoriza artificial inceputul sau finalul codului
+* testul concret poate folosi valori concrete din cod, dar regula abstracta salvata ulterior trebuie sa foloseasca termeni semantici
+* prioritatile pentru testele noi au fost clarificate: corectitudine, zona insuficient testata, regula noua, imbunatatirea scorului si simplitate
+* corectarea propunerilor invalide este formulata afirmativ si orientata spre obtinerea unui test pytest valid
+* in etapa doi, corectarea poate ajusta ideea concreta in aceeasi zona generala de testare, pentru a evita blocarea pe o propunere slaba
+* validarea regulilor a fost relaxata pentru a permite punctuatia naturala simpla
+* filtrarea termenilor concreti din reguli a fost facuta mai permisiva, pentru a reduce respingerea regulilor utile
+* fallback-urile generice de tip regula noua distincta nu mai sunt salvate ca reguli reale in `testing_*.md`
 * contextul AI este resetat in punctele sensibile ale fluxului pentru a reduce contaminarea dintre solicitari diferite
-* corectiile sunt formulate separat, astfel incat modelul sa repare aceeasi idee de test si sa nu schimbe semnificatia semantica
 * sunt folosite mesaje de validare mai utile si mai compacte, pentru a ajuta modelul sa corecteze mai bine raspunsurile invalide
 * fiecare test generat este validat strict, astfel incat sa fie acceptate doar teste care trec efectiv prin `pytest`
 * fiecare categorie este optimizata independent, astfel incat functionalul si structuralul sa evolueze separat
@@ -339,16 +510,15 @@
 * a fost introdus un mecanism de evitare a erorilor pentru categoriile care nu au inca teste acceptate
 * este evitata reevaluarea aceleiasi propuneri deja respinse prin memorarea ei si folosirea unui hash stabil
 * modelului ii sunt aratate incercarile respinse anterior, pentru a reduce repetitiile si a forta cautarea de idei noi
-* modelului ii sunt aratate si regulile explicite deja existente din categorie, pentru a evita dublurile semantice
+* modelului ii sunt aratate si regulile numerotate deja existente din categorie, pentru a evita dublurile semantice
 * in etapa doi sunt acceptate doar propunerile care imbunatatesc categoria fara sa strice scorurile deja obtinute
-* s-a stabilit o ordine pentru 3 prioritati in scrierea functiilor de  testare: corectitudinea & validitatea, reprezentabivitatea / originalitatea, simplitatea
 * cautarea pe o categorie este oprita dupa un numar de iteratii consecutive fara imbunatatire, pentru a limita consumul inutil
 * `coverage` si `mutmut` nu mai sunt rulate atunci cand `pytest` nu produce un rezultat curat, reducand costul evaluarilor inutile
 * cererea de test este separata de cererea de regula, pentru a nu amesteca generarea codului cu abstractizarea regulii
-* forma regulii generale este validata iar regulile prea concrete, prea apropiate de cod sau prea apropiate de reguli deja existente pot fi reformulate
-* pentru cresterea gradului de generalitate si relevanta a regulilor create, s-a dedicat o sesiune exclusiv pentru imbunatatirea regulilor initial formulate pentru testele acceptate
 * fisierul temporar `test_propunere.py` este exclus din arhivare, astfel incat arhiva sa contina doar artefactele finale relevante
 * logarea tehnica a fost imbunatatita, astfel incat motivele de respingere si evolutia scorurilor sa poata fi urmarite mai usor
+* a fost adaugat `manual_testing.py` pentru rularea manuala a pytest, coverage si mutmut pe toate testele sau pe o categorie selectata
+* `manual_testing.py` curata automat artefactele runtime inainte de rulare si poate curata optional si dupa rulare cu `--clean-after`
 
 ## Autor
 

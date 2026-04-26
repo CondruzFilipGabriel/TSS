@@ -74,20 +74,16 @@ class PromptBuilder:
         """
         Construieste instructiunile comune de format pentru generarea functiei de test.
 
-        Aceste instructiuni sunt folosite doar pentru:
-        - generare teste initiale
-        - generare teste noi
-        - corectare propunere invalida
-
-        Metadatele Rule / Reasoning se cer separat, dupa acceptarea testului.
+        Formularea este afirmativa si compacta, pentru a ajuta modelul local sa
+        produca direct forma asteptata.
         """
         return (
-            "Return exactly one complete concrete Python pytest test function and nothing else.\n"
-            "Do not write import statements.\n"
-            "Do not write markdown.\n"
-            "Do not write explanations outside the function.\n"
+            "Return exactly one complete concrete Python pytest test function.\n"
+            "The response contains only the function definition and its body.\n"
+            "The function name starts with test_.\n"
+            "The framework provides imports when needed.\n"
+            "Use direct assertions or pytest.raises inside the function.\n"
         )
-
     # ------------------------------------------------------------------
     # Citirea si compunerea continutului comun
     # ------------------------------------------------------------------
@@ -301,12 +297,10 @@ class PromptBuilder:
         Construieste promptul pentru cererea metadatelor Rule / Reasoning
         dupa ce testul a fost deja acceptat.
 
-        Noua logica:
-        - modelul vede si regulile explicite deja existente din categorie
-        - daca o formulare anterioara a regulii a fost respinsa, primeste
-        raspunsul anterior si motivul reformularii
-        - daca refinement_mode este activ, modelul trebuie sa rescrie o regula
-        deja valida intr-o forma mai reprezentativa si mai reconstructiva
+        Formularea este scurta si afirmativa:
+        - modelul vede categoria, regulile existente si testul acceptat
+        - daca exista feedback anterior, il foloseste pentru a produce o varianta valida
+        - refinement_mode cere o versiune mai clara, nu una mai restrictiva
         """
         _, _, rules_rule_and_reasoning = self._get_rules_sections()
         common = self._get_common_category_context(testing_md_path)
@@ -338,45 +332,45 @@ class PromptBuilder:
         if refinement_mode:
             prompt_parts.append(
                 (
-                    "Rewrite the previous rule and reasoning into a more representative version.\n"
-                    "Keep the same testing meaning.\n"
-                    "Make the new rule more general, more category-faithful, and more reconstructive.\n"
-                    "A good rewritten rule should help recover the same kind of test for another function with similar logic.\n"
-                    "Do not become vaguer.\n"
-                    "Do not become more concrete.\n"
-                    "Keep the rule distinct from the existing explicit rules shown above."
+                    "Improve the previous Rule and Reasoning.\n"
+                    "Keep the same testing idea.\n"
+                    "Use the category vocabulary.\n"
+                    "Make the rule clearer and reusable for similar functions.\n"
+                    "Return exactly the two requested comment lines."
                 )
             )
 
             if previous_rule_response:
                 prompt_parts.append(
-                    "Previous rule-and-reasoning response to improve:\n"
+                    "Previous Rule and Reasoning:\n"
                     f"```text\n{previous_rule_response.strip()}\n```"
                 )
 
             if reformulation_feedback:
                 prompt_parts.append(
-                    "Improvement goal:\n"
+                    "Feedback to apply:\n"
                     f"{reformulation_feedback.strip()}"
                 )
 
         elif previous_rule_response or reformulation_feedback:
             prompt_parts.append(
                 (
-                    "The rule does not satisfy the required form. Rewrite it.\n"
-                    "Use the rule-and-reasoning instructions above again and produce a stricter generalization."
+                    "Write a corrected Rule and Reasoning.\n"
+                    "Use the category vocabulary.\n"
+                    "Use semantic terms instead of concrete values or names.\n"
+                    "Return exactly the two requested comment lines."
                 )
             )
 
             if previous_rule_response:
                 prompt_parts.append(
-                    "Previous rule-and-reasoning response:\n"
+                    "Previous response:\n"
                     f"```text\n{previous_rule_response.strip()}\n```"
                 )
 
             if reformulation_feedback:
                 prompt_parts.append(
-                    "Reformulation feedback:\n"
+                    "Feedback to apply:\n"
                     f"{reformulation_feedback.strip()}"
                 )
 
@@ -397,12 +391,11 @@ class PromptBuilder:
         """
         Construieste promptul pentru corectarea unei propuneri invalide de test.
 
-        Noua logica:
-        - modelul trebuie sa corecteze exact functia respinsa, nu sa schimbe ideea
-        - eroarea de validare este data explicit ca restrictie concreta
-        - in etapa 2 pastram si testele deja acceptate in categorie
-        - in etapa 2 pastram si regulile explicite deja existente, pentru ca
-        propunerea corectata sa ramana distincta fata de ele
+        Logica:
+        - in etapa 1, corectarea ramane legata de regula numerotata ceruta
+        - in etapa 2, corectarea ramane in aceeasi categorie si aceeasi zona
+        generala de testare, dar poate ajusta ideea concreta pentru validitate
+        - formularea este afirmativa, scurta si orientata spre test pytest valid
         """
         if not validation_error:
             raise ValueError(
@@ -412,16 +405,6 @@ class PromptBuilder:
         common = self._get_common_category_context(testing_md_path)
         format_instructions = self.build_format_instructions()
         proposed_function = proposed_function or "# Empty or unusable previous answer"
-
-        correction_instructions = (
-            f"{format_instructions}"
-            "You are correcting a previously rejected test.\n"
-            "You must correct the same proposed test shown below.\n"
-            "Do not switch to another rule.\n"
-            "Do not replace it with a different testing idea.\n"
-            "Keep the same testing intent, but fix the concrete validation problem.\n"
-            "Use the validation error as a strict constraint.\n"
-        ).strip()
 
         if bullet_index is not None:
             rules_initial_tests, _, _ = self._get_rules_sections()
@@ -434,13 +417,22 @@ class PromptBuilder:
 
             explicit_rule_text = bullets[bullet_index]
 
+            correction_instructions = (
+                f"{format_instructions}"
+                "Repair the proposed test so it becomes one valid pytest test.\n"
+                "Keep the requested numbered rule as the testing purpose.\n"
+                "Use the validation error to fix the concrete problem.\n"
+                "Use behavior reachable through normal calls to the provided source code.\n"
+                "Return one complete test function.\n"
+            ).strip()
+
             prompt_parts = [
                 rules_initial_tests,
                 common["general_category_rules"],
                 correction_instructions,
                 (
                     f"Category: {common['category']}\n"
-                    "You are correcting a previous invalid answer from the initial-tests stage.\n"
+                    "Correction context: initial tests stage.\n"
                     f"Explicit rule number: {bullet_index + 1}\n"
                     f"Explicit rule text: {explicit_rule_text}"
                 ),
@@ -449,7 +441,7 @@ class PromptBuilder:
                     f"```python\n{common['source_code']}\n```"
                 ),
                 (
-                    "Previous proposed answer to be corrected:\n"
+                    "Previous proposed answer:\n"
                     f"```python\n{proposed_function}\n```"
                 ),
                 f"Validation error:\n{validation_error}",
@@ -461,8 +453,23 @@ class PromptBuilder:
         next_bullet_number = int(common["explicit_bullets_count"]) + 1
 
         existing_rules_section = self._build_existing_explicit_rules_section(
-            explicit_bullets=common["explicit_bullets"] if isinstance(common["explicit_bullets"], list) else []
+            explicit_bullets=(
+                common["explicit_bullets"]
+                if isinstance(common["explicit_bullets"], list)
+                else []
+            )
         )
+
+        correction_instructions = (
+            f"{format_instructions}"
+            "Repair the proposed test so it becomes one valid pytest test.\n"
+            "Keep the requested category and the same general testing area.\n"
+            "Use the validation error to fix the concrete problem.\n"
+            "Adjust concrete inputs, expected result, or assertion when needed.\n"
+            "Use behavior reachable through normal calls to the provided source code.\n"
+            "Keep the corrected test distinct from accepted numbered rules and rejected attempts.\n"
+            "Return one complete test function.\n"
+        ).strip()
 
         prompt_parts = [
             rules_new_tests,
@@ -470,9 +477,9 @@ class PromptBuilder:
             correction_instructions,
             (
                 f"Category: {common['category']}\n"
-                "You are correcting a previous invalid answer from the new-tests stage.\n"
-                f"Existing explicit bullets in this category: {common['explicit_bullets_count']}\n"
-                f"Next bullet number if accepted: {next_bullet_number}"
+                "Correction context: new tests stage.\n"
+                f"Existing accepted numbered rules in this category: {common['explicit_bullets_count']}\n"
+                f"Next rule number if accepted: {next_bullet_number}"
             ),
             existing_rules_section,
             (
@@ -484,7 +491,7 @@ class PromptBuilder:
                 f"```python\n{common['source_code']}\n```"
             ),
             (
-                "Previous proposed answer to be corrected:\n"
+                "Previous proposed answer:\n"
                 f"```python\n{proposed_function}\n```"
             ),
             f"Validation error:\n{validation_error}",

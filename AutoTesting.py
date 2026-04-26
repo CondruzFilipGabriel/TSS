@@ -573,7 +573,6 @@ class AutoTesting:
                             test_file_path=category_test_file,
                             function_code=valid_function,
                         )
-                        self.numar_reguli_adaugate += 1
 
                         rule, reasoning = self.solicita_rule_si_reasoning(
                             testing_md_path=testing_md_path,
@@ -585,18 +584,17 @@ class AutoTesting:
                             after_scores=after_scores,
                         )
 
-                        self.logger.append_rule(
+                        rule_was_saved = self.salveaza_regula_acceptata_daca_exista(
                             category=category,
+                            testing_md_path=testing_md_path,
                             rule=rule,
                             reasoning=reasoning,
                             improvement=improvement,
                         )
 
-                        self.workspace.append_rule_bullet_to_testing_md(
-                            testing_md_path=testing_md_path,
-                            rule_text=rule,
-                        )
-
+                        if rule_was_saved:
+                            self.numar_reguli_adaugate += 1
+                            
                         self.workspace.clear_proposal_test_file()
                         self.ollama_client.reset_context()
 
@@ -685,94 +683,99 @@ class AutoTesting:
 
     def contains_forbidden_rule_characters(self, rule: str) -> bool:
         """
-        Verifica daca regula contine caractere sau forme interzise.
+        Verifica daca regula contine caractere care tind sa transforme regula
+        intr-o formulare concreta, numerica sau asemanatoare codului.
 
-        Interzicem explicit:
-        - cifre
-        - underscore
-        - backticks
-        - paranteze, acolade, paranteze patrate
-        - slash-uri
-        - operatori sau notatii asemanatoare codului
-        - ghilimele
+        Permitem punctuatie naturala simpla:
+        - virgula
+        - punct
+        - punct si virgula
+        - doua puncte
+        - liniuta
         """
         if not (rule or "").strip():
             return False
 
-        forbidden_pattern = r"[0-9_`\"'()\[\]{}\\/=<>\+\-\*%]"
-        return re.search(forbidden_pattern, rule) is not None
+        forbidden_pattern = r"[0-9_`\"'()\[\]{}\\/<>+=*%]"
+        if re.search(forbidden_pattern, rule):
+            return True
+
+        code_like_pattern = r"(==|!=|<=|>=|->|=>|\+\+|--)"
+        return re.search(code_like_pattern, rule) is not None
 
 
-    def extract_forbidden_rule_identifiers(
+    def extract_strict_forbidden_rule_terms(
         self,
         testing_md_path: Path,
         accepted_function: str,
     ) -> set[str]:
         """
-        Extrage identificatori concreti din codul sursa si din functia acceptata,
-        pentru a preveni aparitia lor in regula generalizata.
+        Extrage doar termenii concreti care sunt foarte probabil specifici codului:
+        - nume de functii definite in sursa sau in test
+        - fragmente alfabetice din stringuri concrete
 
-        Exemple:
-        - nume de functie
-        - nume de variabile
-        - nume de stari / rezultate concrete
+        Aceasta metoda este mai permisiva decat extragerea tuturor identificatorilor,
+        pentru a nu respinge inutil termeni generici utili regulii.
         """
         source_code = self.workspace.read_file_under_test_source()
         combined_text = f"{source_code}\n{accepted_function}"
 
-        identifiers = re.findall(r"\b[A-Za-z_][A-Za-z0-9_]*\b", combined_text)
+        result: set[str] = set()
 
-        ignored_words = {
-            "def",
-            "return",
-            "if",
-            "elif",
-            "else",
-            "for",
-            "while",
-            "with",
-            "raise",
-            "assert",
-            "in",
-            "and",
-            "or",
-            "not",
-            "true",
-            "false",
-            "none",
-            "import",
-            "from",
-            "pytest",
+        for function_name in re.findall(r"\bdef\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(", combined_text):
+            for token in re.findall(r"[A-Za-z]+", function_name):
+                lowered = token.lower()
+                if len(lowered) > 2:
+                    result.add(lowered)
+
+        string_matches = re.findall(
+            r"(?:'([^']*)'|\"([^\"]*)\")",
+            combined_text,
+            flags=re.DOTALL,
+        )
+
+        for single_quoted, double_quoted in string_matches:
+            string_value = single_quoted or double_quoted
+            for token in re.findall(r"[A-Za-z]+", string_value):
+                lowered = token.lower()
+                if len(lowered) > 2:
+                    result.add(lowered)
+
+        ignored_terms = {
             "test",
+            "rule",
+            "reasoning",
+            "pytest",
+            "raises",
+            "value",
+            "input",
+            "output",
+            "condition",
+            "decision",
+            "behavior",
+            "exception",
+            "result",
         }
 
-        result: set[str] = set()
-        for identifier in identifiers:
-            lowered = identifier.lower()
-            if lowered in ignored_words:
-                continue
-            if len(lowered) <= 2:
-                continue
-            result.add(lowered)
-
-        return result
+        return {term for term in result if term not in ignored_terms}
 
 
-    def rule_contains_forbidden_identifiers(
+    def rule_contains_strict_forbidden_terms(
         self,
         rule: str,
-        forbidden_identifiers: set[str],
+        forbidden_terms: set[str],
     ) -> bool:
         """
-        Verifica daca regula contine identificatori concreti extrasi din scriptul curent.
+        Verifica daca regula foloseste termeni concreti extrasi din nume de functii
+        sau din stringuri concrete ale codului curent.
         """
-        normalized_rule = re.findall(r"\b[a-zA-Z_][a-zA-Z_]*\b", (rule or "").lower())
+        rule_terms = {
+            token.lower()
+            for token in re.findall(r"\b[A-Za-z]+\b", rule or "")
+            if len(token) > 2
+        }
 
-        for token in normalized_rule:
-            if token in forbidden_identifiers:
-                return True
-
-        return False
+        return any(term in rule_terms for term in forbidden_terms)
 
 
     def is_rule_too_similar_to_existing_rules(
@@ -817,11 +820,13 @@ class AutoTesting:
         accepted_function: str,
     ) -> str:
         """
-        Valideaza forma si nivelul de generalizare pentru Rule / Reasoning.
+        Valideaza forma minima si nivelul minim de generalizare pentru Rule / Reasoning.
 
-        Returneaza:
-        - "Valid" daca raspunsul este acceptabil
-        - altfel, un mesaj de reformulare
+        Validarea este intentionat mai permisiva:
+        - pastreaza forma in doua linii
+        - blocheaza regulile goale sau generice
+        - blocheaza caracterele code-like
+        - blocheaza termenii concreti evidenti din nume de functii si stringuri
         """
         nonempty_lines = [
             line.strip()
@@ -831,63 +836,56 @@ class AutoTesting:
 
         if len(nonempty_lines) != 2:
             return (
-                "The rule does not satisfy the required form. Rewrite it.\n"
-                "Return exactly two non-empty comment lines and nothing else."
+                "Return exactly two non-empty comment lines.\n"
+                "Line one must start with '# Rule:'.\n"
+                "Line two must start with '# Reasoning:'."
             )
 
         if not nonempty_lines[0].startswith("# Rule:"):
-            return (
-                "The rule does not satisfy the required form. Rewrite it.\n"
-                "The first line must start exactly with '# Rule:'."
-            )
+            return "Line one must start exactly with '# Rule:'."
 
         if not nonempty_lines[1].startswith("# Reasoning:"):
+            return "Line two must start exactly with '# Reasoning:'."
+
+        cleaned_rule = (rule or "").strip()
+        cleaned_reasoning = (reasoning or "").strip()
+
+        if not cleaned_rule:
+            return "The rule text is empty. Write one reusable category rule."
+
+        if not cleaned_reasoning:
+            return "The reasoning text is empty. Write one concise reason."
+
+        if self.is_weak_generic_rule(cleaned_rule):
             return (
-                "The rule does not satisfy the required form. Rewrite it.\n"
-                "The second line must start exactly with '# Reasoning:'."
+                "The rule is too generic. Write the concrete type of test in general terms, "
+                "using the category vocabulary."
             )
 
-        if not (rule or "").strip():
+        if self.contains_forbidden_rule_characters(cleaned_rule):
             return (
-                "The rule does not satisfy the required form. Rewrite it.\n"
-                "The rule text is empty."
+                "The rule contains code-like characters. Use plain English words, spaces, "
+                "and simple punctuation only."
             )
 
-        if not (reasoning or "").strip():
-            return (
-                "The rule does not satisfy the required form. Rewrite it.\n"
-                "The reasoning text is empty."
-            )
-
-        if self.contains_forbidden_rule_characters(rule):
-            return (
-                "The rule does not satisfy the required form. Rewrite it.\n"
-                "The rule contains forbidden characters or code-like notation.\n"
-                "Do not use digits, underscores, backticks, parentheses, brackets, braces, slashes, quotes, or operator-like symbols.\n"
-                "Use a more general wording such as threshold value, zero value, minimum accepted value, maximum rejected value, validation path, default path, override path, accepted outcome, rejected outcome, or special outcome."
-            )
-
-        forbidden_identifiers = self.extract_forbidden_rule_identifiers(
+        forbidden_terms = self.extract_strict_forbidden_rule_terms(
             testing_md_path=testing_md_path,
             accepted_function=accepted_function,
         )
 
-        if self.rule_contains_forbidden_identifiers(rule, forbidden_identifiers):
+        if self.rule_contains_strict_forbidden_terms(cleaned_rule, forbidden_terms):
             return (
-                "The rule does not satisfy the required form. Rewrite it.\n"
-                "The rule still contains file-specific identifiers from the current script.\n"
-                "Do not use function names, variable names, class names, or concrete instantiated names from the code.\n"
-                "Replace them with semantic abstractions such as analyzed function, numeric parameter, counting parameter, state parameter, input data, parameter combination, threshold value, validation exception, accepted outcome, or execution path."
+                "The rule contains concrete terms from the current code. Replace them with "
+                "category-level semantic terms."
             )
 
         if self.is_rule_too_similar_to_existing_rules(
             testing_md_path=testing_md_path,
-            rule=rule,
+            rule=cleaned_rule,
         ):
             return (
-                "The rule does not satisfy the required form. Rewrite it.\n"
-                "The rule is too close to an existing rule in the same category.\n"
-                "Rewrite it in a more general and genuinely distinct form."
+                "The rule is too close to an existing accepted rule. Write the new testing "
+                "idea more distinctly."
             )
 
         return "Valid"
@@ -895,10 +893,8 @@ class AutoTesting:
 
     def is_weak_generic_rule(self, rule: str) -> bool:
         """
-        Detecteaza reguli prea vagi sau prea apropiate de fallback-uri.
-
-        Aceasta nu este o validare dura de forma, ci o euristica pentru a decide
-        daca o reformulare este semantic mai buna decat alta.
+        Detecteaza reguli prea vagi sau fallback-uri care nu trebuie salvate ca
+        reguli reale in testing_*.md.
         """
         normalized = self.normalize_rule_text_for_comparison(rule)
 
@@ -911,6 +907,9 @@ class AutoTesting:
             "generic rule",
             "test rule",
             "new rule",
+            "new test",
+            "accepted test",
+            "useful new case",
         }
 
         return normalized in weak_rules
@@ -1173,20 +1172,18 @@ class AutoTesting:
         self,
         testing_md_path: Path,
         accepted_function: str,
-    ) -> tuple[str, str]:
+    ) -> tuple[str | None, str]:
         """
         Cere separat metadatele Rule / Reasoning pentru un test deja acceptat.
 
-        Flux nou:
-        1. obtine prima varianta valida formal
-        2. reseteaza contextul
-        3. cere o versiune mai reprezentativa, mai generala si mai reconstructiva
-        4. daca versiunea rafinata este valida si mai buna, o pastreaza
-        5. altfel pastreaza prima varianta valida
+        Daca modelul nu poate formula o regula valida, se returneaza:
+        - rule = None
+        - reasoning = motiv tehnic scurt
+
+        In acest caz testul ramane acceptat, dar nu se adauga regula in testing_*.md.
         """
-        fallback_rule = "New distinct accepted rule in this category"
         fallback_reasoning = (
-            "The accepted test improved the category and added a useful new case."
+            "The accepted test improved the category, but no valid reusable rule was generated."
         )
 
         first_raw, first_rule, first_reasoning = self.obtine_rule_si_reasoning_valid(
@@ -1196,22 +1193,24 @@ class AutoTesting:
         )
 
         if not first_rule or not first_reasoning:
-            return fallback_rule, fallback_reasoning
+            return None, fallback_reasoning
 
         first_rule = self.normalize_rule_text(
             rule=first_rule,
-            fallback_rule=fallback_rule,
+            fallback_rule="",
         )
+
+        if not first_rule or self.is_weak_generic_rule(first_rule):
+            return None, fallback_reasoning
 
         self.ollama_client.reset_context()
 
         refinement_feedback = (
-            "Rewrite the previous rule and reasoning into a more representative version.\n"
-            "Keep the same testing meaning.\n"
-            "Make the rule more general, more category-faithful, and more reconstructive.\n"
-            "If another function had similar logic, this rewritten rule should naturally lead to the same kind of test.\n"
-            "Do not become vaguer.\n"
-            "Do not become more concrete."
+            "Improve the previous Rule and Reasoning.\n"
+            "Keep the same testing idea.\n"
+            "Use the category vocabulary.\n"
+            "Make the rule clearer and reusable for similar functions.\n"
+            "Return exactly the two requested comment lines."
         )
 
         refined_raw, refined_rule, refined_reasoning = self.obtine_rule_si_reasoning_valid(
@@ -1228,8 +1227,11 @@ class AutoTesting:
 
         refined_rule = self.normalize_rule_text(
             rule=refined_rule,
-            fallback_rule=first_rule,
+            fallback_rule="",
         )
+
+        if not refined_rule or self.is_weak_generic_rule(refined_rule):
+            return first_rule, first_reasoning
 
         best_rule, best_reasoning = self.choose_better_rule_candidate(
             testing_md_path=testing_md_path,
@@ -1239,7 +1241,51 @@ class AutoTesting:
             refined_reasoning=refined_reasoning,
         )
 
+        if not best_rule or self.is_weak_generic_rule(best_rule):
+            return None, fallback_reasoning
+
         return best_rule, best_reasoning
+
+
+    def salveaza_regula_acceptata_daca_exista(
+        self,
+        category: str,
+        testing_md_path: Path,
+        rule: str | None,
+        reasoning: str,
+        improvement: str,
+    ) -> bool:
+        """
+        Salveaza regula acceptata in Logs.jsonl si testing_*.md doar daca regula
+        este valida si negenerica.
+
+        Returneaza True daca regula a fost salvata, altfel False.
+        """
+        cleaned_rule = (rule or "").strip()
+
+        if not cleaned_rule or self.is_weak_generic_rule(cleaned_rule):
+            self.logger.warning(
+                f"Testul a fost acceptat in categoria {category}, dar regula nu a putut fi formulata valid. "
+                "Testul ramane in fisierul categoriei, insa nu se adauga regula in testing_*.md."
+            )
+            self.logger.debug(
+                f"Motiv Rule/Reasoning nesalvat pentru {category}: {reasoning}"
+            )
+            return False
+
+        self.logger.append_rule(
+            category=category,
+            rule=cleaned_rule,
+            reasoning=reasoning,
+            improvement=improvement,
+        )
+
+        self.workspace.append_rule_bullet_to_testing_md(
+            testing_md_path=testing_md_path,
+            rule_text=cleaned_rule,
+        )
+
+        return True
 
 
     # ------------------------------------------------------------------
