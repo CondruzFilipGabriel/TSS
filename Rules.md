@@ -1,81 +1,59 @@
-# Initial tests
+# Existing subtype test stage
 
-Goal:
-Create one concrete pytest test function for the requested numbered rule.
+Task: write exactly one pytest test for the requested instruction.
 
-Output:
-- Return exactly one complete Python pytest test function.
-- Start the function name with `test_`.
-- Target only the provided source code.
-- Use direct assertions or `pytest.raises`.
-- Put only test logic inside the function.
+The requested instruction is the only testing goal for this answer.
+Read the source code, choose concrete input values and write an exact assertion.
 
-Test construction:
-- Implement the requested numbered rule exactly.
-- Derive expected behavior from the provided source code and comments.
-- Use concrete inputs supported by the current code.
-- Select behavior reachable through normal function calls.
-- Keep one primary purpose and one scenario.
-- Prefer a meaningful uncovered area that still matches the rule.
+Output format:
+- Return only one Python function.
+- The function name must start with `test_`.
+- Do not write imports.
+- Do not write helper functions.
+- Do not write markdown fences.
+- Use the function from `to_test.py` directly.
+- Use `assert` for returned values.
+- Use `pytest.raises` for expected exceptions.
+- Assert the exact visible behavior.
 
-Priorities:
-1. Correctness and pytest validity.
-2. Match the generated function to the requested rule.
-3. Simplicity.
+Behavior:
+- Follow the requested instruction exactly.
+- Use one concrete case.
+- Use a new function name.
+- Avoid repeating accepted tests.
+- Avoid repeating rejected tests.
+- Prefer simple inputs whose expected result is clear from the source code.
 
-# New tests
+# New test discovery stage
 
-Goal:
-Create one concrete pytest test function that adds a genuinely new accepted rule in the category.
+Task: write exactly one new pytest test for the current category.
 
-Output:
-- Return exactly one complete Python pytest test function.
-- Start the function name with `test_`.
-- Target only the provided source code.
-- Use direct assertions or `pytest.raises`.
-- Put only test logic inside the function.
+Use the category instruction as the main goal.
+The new test must be different from the listed explicit subtypes and from already accepted or rejected tests.
+Read the source code and choose a concrete behavior or execution path that is not already tested.
 
-Search:
-- Read the source code, accepted tests, rejected attempts, and category file.
-- Select one category-specific area that seems insufficiently covered.
-- Generate a category test that differs from accepted numbered rules and rejected attempts.
+Output format:
+- Return only one Python function.
+- The function name must start with `test_`.
+- Do not write imports.
+- Do not write helper functions.
+- Do not write markdown fences.
+- Use the function from `to_test.py` directly.
+- Use exact assertions.
 
-Test construction:
-- Derive expected behavior from the provided source code and comments.
-- Use concrete inputs supported by the current code.
-- Select behavior reachable through normal function calls.
-- Keep one primary purpose and one scenario.
+Behavior:
+- Do not repeat existing instructions.
+- Do not repeat accepted tests.
+- Do not repeat rejected tests.
+- Prefer a test that can improve branch coverage or mutation score.
+- Keep the test inside the current category.
 
-Priorities:
-1. Correctness and pytest validity.
-2. Target an insufficiently tested area in the source code.
-3. Propose a genuinely new rule.
-4. Improve the testing score.
-5. Keep it simple.
+# Rule synthesis stage
 
-# Rule and reasoning
+Task: write metadata for an accepted test.
 
-Goal:
-Describe the accepted test as one reusable category rule.
-
-Output:
-- Return exactly two non-empty comment lines.
-- Line one: `# Rule: <text>`
-- Line two: `# Reasoning: <text>`
-
-Rule construction:
-- Write the type of test, not the concrete test data.
-- Use the requested category vocabulary.
-- Describe one generic situation tested by the accepted test.
-- Use semantic terms instead of concrete values, names, return strings, or exception messages.
-- Write the rule so it can guide a similar test for another function.
-
-Rule text:
-- Use plain English words.
-- Use spaces and simple punctuation.
-- Allowed punctuation: comma, period, semicolon, colon, and hyphen.
-- Use category vocabulary as the main reference.
-
-Reasoning construction:
-- State what useful area the test adds.
-- Keep it to one concise sentence.
+Output format:
+- Write one `# Rule:` line.
+- Write one `# Reasoning:` line.
+- The rule must be short, general and reusable.
+- If there is no good reusable rule, write an empty rule.

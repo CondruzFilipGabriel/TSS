@@ -1,29 +1,21 @@
-# Functional testing
+# Functional test instructions
 
-This category checks visible behavior for the caller.
+Category instruction: create tests for visible behavior only.
+A functional test chooses inputs from the public input domain and checks the exact result visible to the caller: returned value or raised exception.
+Do not target internal implementation details directly. Use boundaries, normal cases, invalid inputs and distinct output classes when they are visible in the function behavior.
+Each numbered line below is one direct instruction for one small pytest test.
 
-Vocabulary:
-observable behavior, input class, output class, validation behavior, validation exception, boundary effect, accepted range, rejected range, threshold value, zero value, empty input, normal outcome, special outcome, rejected outcome, cause effect relation, masked effect, observable precedence, final visible result.
-
-Sub-category areas:
-- Equivalence class: distinguishes behavior between meaningful input classes.
-- Output class: targets a distinct returned result or exception.
-- Validation behavior: checks whether input is visibly accepted or rejected.
-- Boundary effect: checks behavior at or near a behavior-changing boundary.
-- Empty or neutral input: checks visible behavior when useful input data is absent or neutral.
-- Category alternative: checks a meaningful alternative of an input property.
-- Feasible combination: checks input properties that work together to change the visible result.
-- Cause effect relation: links input conditions to the visible effect they produce.
-- Cause constraint: checks a cause that works alone, as an alternative, or together with another cause.
-- Masked effect or observable precedence: checks which visible outcome prevails over another.
-- Normal or special outcome: distinguishes typical accepted behavior from a distinct non-default result.
-- Type, domain, collection, membership, or state-like effect: checks a supported input property that changes the visible result.
-
-Rule style:
-- Describe the relation between input and visible behavior.
-- Use observable behavior vocabulary.
-- Generalize concrete values as input class, boundary, range, threshold, outcome, or effect.
-- Each new rule adds different observable behavior, validation behavior, boundary effect, output class, cause effect relation, or observable precedence.
-- Different concrete values count when they create different visible behavior.
-
-1. test a valid input case that should return the normal accepted result
+1. Make one test with normal valid values and assert the exact returned result.
+2. Make one test with different normal valid values and assert a different exact returned result.
+3. Make one test with invalid negative numeric values and assert the exact exception.
+4. Make one test with a value exactly on an important boundary and assert the exact returned result.
+5. Make one test with a value just below an important boundary and assert the exact returned result.
+6. Make one test with a value just above an important boundary and assert the exact returned result.
+7. Make one test where a boolean argument is True and assert the exact returned result.
+8. Make one test where a boolean argument is False and assert the exact returned result.
+9. Make one test that returns a special result and assert that exact result.
+10. Make one test that almost reaches the special result, but does not, and assert the exact returned result.
+11. Make one test with zero or the smallest allowed value and assert the exact returned result.
+12. Make one test with large valid values and assert the exact returned result.
+13. Make one test with valid values that combine two visible rules and assert the final exact result.
+14. Make one test with valid values that avoid a visible special rule and assert the normal exact result.

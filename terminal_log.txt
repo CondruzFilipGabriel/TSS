@@ -1,0 +1,791 @@
+f@Bijou:~/Desktop/TSS$ python3 -m compileall -q AutoTesting.py manual_testing.py reset.py run_examples.py Includes
+python3 run_examples.py 1
+python3 AutoTesting.py
+
+=== Exemplul 1 ===
+Copiat: /home/f/Desktop/TSS/examples/1/to_test.py -> /home/f/Desktop/TSS/to_test.py
+Workspace resetat la o stare curata.
+- test_functional.py: OK
+- test_structural.py: OK
+- test_propunere.py: OK
+Exemplul a fost doar pregatit. Ruleaza python3 AutoTesting.py cand doresti.
+[AutoTesting] Pregatiri initiale:
+[AutoTesting]     - curat workspace-ul de fisiere temporare
+[AutoTesting]     - verific existenta conditiilor de rulare
+[AutoTesting] ------------------------------------------------------------
+[AutoTesting] Etapa 1:
+[AutoTesting]     - generez teste pe subtipurile existente
+[AutoTesting]     - procesez categoria functional
+[AutoTesting]     - subtip 1/15 pentru functional
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 30.27s
+[AutoTesting] AI: validez functia propusa si cer o corectie...
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 20.35s
+[AutoTesting]     - test acceptat in categoria functional, subtip 1
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 25.78s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 24.96s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 26.99s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting]     - subtip 2/15 pentru functional
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 23.59s
+[AutoTesting]     - test acceptat in categoria functional, subtip 2
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 23.69s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 27.23s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 30.1s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting]     - subtip 3/15 pentru functional
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 25.32s
+[AutoTesting] AI: validez functia propusa si cer o corectie...
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 26.98s
+[AutoTesting] AI: a fost atins numarul maxim de tentative de corectie.
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 37.74s
+[AutoTesting] AI: validez functia propusa si cer o corectie...
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 26.95s
+[AutoTesting] AI: a fost atins numarul maxim de tentative de corectie.
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 38.85s
+[AutoTesting] AI: validez functia propusa si cer o corectie...
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 27.0s
+[AutoTesting] AI: a fost atins numarul maxim de tentative de corectie.
+[AutoTesting] AI: resetez contextul.
+[AutoTesting]     - subtip 4/15 pentru functional
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 24.56s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 24.61s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 26.69s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting]     - subtip 5/15 pentru functional
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 23.09s
+[AutoTesting] AI: validez functia propusa si cer o corectie...
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 20.77s
+[AutoTesting]     - test acceptat in categoria functional, subtip 5
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 28.63s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 28.04s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 30.36s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting]     - subtip 6/15 pentru functional
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 23.79s
+[AutoTesting]     - test acceptat in categoria functional, subtip 6
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 23.3s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 26.52s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 28.59s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting]     - subtip 7/15 pentru functional
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 24.77s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 26.36s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 28.61s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting]     - subtip 8/15 pentru functional
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 24.89s
+[AutoTesting] AI: validez functia propusa si cer o corectie...
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 20.27s
+[AutoTesting]     - test acceptat in categoria functional, subtip 8
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 29.86s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 29.06s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 31.25s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting]     - subtip 9/15 pentru functional
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 25.45s
+[AutoTesting]     - test acceptat in categoria functional, subtip 9
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 27.06s
+[AutoTesting] AI: validez functia propusa si cer o corectie...
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 22.81s
+[AutoTesting] AI: a fost atins numarul maxim de tentative de corectie.
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 34.52s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 33.89s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting]     - subtip 10/15 pentru functional
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 28.26s
+[AutoTesting] AI: validez functia propusa si cer o corectie...
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 22.8s
+[AutoTesting] AI: a fost atins numarul maxim de tentative de corectie.
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 34.55s
+[AutoTesting] AI: validez functia propusa si cer o corectie...
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 22.81s
+[AutoTesting] AI: a fost atins numarul maxim de tentative de corectie.
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 35.67s
+[AutoTesting] AI: validez functia propusa si cer o corectie...
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 22.79s
+[AutoTesting] AI: a fost atins numarul maxim de tentative de corectie.
+[AutoTesting] AI: resetez contextul.
+[AutoTesting]     - subtip 11/15 pentru functional
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 30.09s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 31.28s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 33.26s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting]     - subtip 12/15 pentru functional
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 26.39s
+[AutoTesting] AI: validez functia propusa si cer o corectie...
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 20.57s
+[AutoTesting]     - test acceptat in categoria functional, subtip 12
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 32.3s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 31.79s
+[AutoTesting] AI: validez functia propusa si cer o corectie...
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 21.39s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 39.03s
+[AutoTesting] AI: validez functia propusa si cer o corectie...
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 21.65s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting]     - subtip 13/15 pentru functional
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 29.6s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 29.72s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 32.21s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting]     - subtip 14/15 pentru functional
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 27.66s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 29.49s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 31.93s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting]     - subtip 15/15 pentru functional
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 28.03s
+[AutoTesting] AI: validez functia propusa si cer o corectie...
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 20.98s
+[AutoTesting] AI: a fost atins numarul maxim de tentative de corectie.
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 35.49s
+[AutoTesting] AI: validez functia propusa si cer o corectie...
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 21.34s
+[AutoTesting] AI: a fost atins numarul maxim de tentative de corectie.
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 39.03s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: resetez contextul.
+[AutoTesting]     - procesez categoria structural
+[AutoTesting]     - subtip 1/20 pentru structural
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 20.94s
+[AutoTesting] AI: validez functia propusa si cer o corectie...
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 20.47s
+[AutoTesting] AI: a fost atins numarul maxim de tentative de corectie.
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 26.23s
+[AutoTesting] AI: validez functia propusa si cer o corectie...
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 20.45s
+[AutoTesting] AI: a fost atins numarul maxim de tentative de corectie.
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 28.98s
+[AutoTesting] AI: validez functia propusa si cer o corectie...
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 20.48s
+[AutoTesting] AI: a fost atins numarul maxim de tentative de corectie.
+[AutoTesting] AI: resetez contextul.
+[AutoTesting]     - subtip 2/20 pentru structural
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 22.47s
+[AutoTesting] AI: validez functia propusa si cer o corectie...
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 20.27s
+[AutoTesting]     - test acceptat in categoria structural, subtip 2
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 25.69s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 25.1s
+[AutoTesting] AI: validez functia propusa si cer o corectie...
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 20.27s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 31.83s
+[AutoTesting] AI: validez functia propusa si cer o corectie...
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 20.48s
+[AutoTesting] AI: a fost atins numarul maxim de tentative de corectie.
+[AutoTesting] AI: resetez contextul.
+[AutoTesting]     - subtip 3/20 pentru structural
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 23.1s
+[AutoTesting]     - test acceptat in categoria structural, subtip 3
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 20.92s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 24.07s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 26.12s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting]     - subtip 4/20 pentru structural
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 22.53s
+[AutoTesting] AI: validez functia propusa si cer o corectie...
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 20.85s
+[AutoTesting]     - test acceptat in categoria structural, subtip 4
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 27.89s
+[AutoTesting] AI: validez functia propusa si cer o corectie...
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 20.82s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 32.24s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 31.64s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting]     - subtip 5/20 pentru structural
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 23.67s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 25.52s
+[AutoTesting] AI: validez functia propusa si cer o corectie...
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 20.12s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 32.5s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting]     - subtip 6/20 pentru structural
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 23.34s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 24.96s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 27.16s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting]     - subtip 7/20 pentru structural
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 23.71s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 25.45s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 27.81s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting]     - subtip 8/20 pentru structural
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 23.58s
+[AutoTesting] AI: validez functia propusa si cer o corectie...
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 20.62s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 29.98s
+[AutoTesting] AI: validez functia propusa si cer o corectie...
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 20.54s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 33.79s
+[AutoTesting] AI: validez functia propusa si cer o corectie...
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 20.55s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting]     - subtip 9/20 pentru structural
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 24.72s
+[AutoTesting]     - test acceptat in categoria structural, subtip 9
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 22.51s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 25.6s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 27.65s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting]     - subtip 10/20 pentru structural
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 23.79s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 25.7s
+[AutoTesting] AI: validez functia propusa si cer o corectie...
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 19.82s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 32.24s
+[AutoTesting] AI: validez functia propusa si cer o corectie...
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 19.78s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting]     - subtip 11/20 pentru structural
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 25.38s
+[AutoTesting]     - test acceptat in categoria structural, subtip 11
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 23.57s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 26.46s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 28.76s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting]     - subtip 12/20 pentru structural
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 24.59s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 26.21s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 28.41s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting]     - subtip 13/20 pentru structural
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 25.09s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 26.74s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 29.07s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting]     - subtip 14/20 pentru structural
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 25.2s
+[AutoTesting] AI: validez functia propusa si cer o corectie...
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 20.88s
+[AutoTesting] AI: a fost atins numarul maxim de tentative de corectie.
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 32.72s
+[AutoTesting] AI: validez functia propusa si cer o corectie...
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 20.81s
+[AutoTesting] AI: a fost atins numarul maxim de tentative de corectie.
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 35.57s
+[AutoTesting] AI: validez functia propusa si cer o corectie...
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 20.71s
+[AutoTesting] AI: a fost atins numarul maxim de tentative de corectie.
+[AutoTesting] AI: resetez contextul.
+[AutoTesting]     - subtip 15/20 pentru structural
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 26.13s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 25.96s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 28.11s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting]     - subtip 16/20 pentru structural
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 24.71s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 26.35s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 28.24s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting]     - subtip 17/20 pentru structural
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 25.44s
+[AutoTesting]     - test acceptat in categoria structural, subtip 17
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 25.0s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 27.87s
+[AutoTesting] AI: validez functia propusa si cer o corectie...
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 20.86s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 35.26s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting]     - subtip 18/20 pentru structural
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 26.45s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 28.38s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 30.65s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting]     - subtip 19/20 pentru structural
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 25.82s
+[AutoTesting] AI: validez functia propusa si cer o corectie...
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 20.42s
+[AutoTesting] AI: a fost atins numarul maxim de tentative de corectie.
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 33.21s
+[AutoTesting] AI: validez functia propusa si cer o corectie...
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 20.39s
+[AutoTesting] AI: a fost atins numarul maxim de tentative de corectie.
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 34.15s
+[AutoTesting] AI: validez functia propusa si cer o corectie...
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 20.38s
+[AutoTesting] AI: a fost atins numarul maxim de tentative de corectie.
+[AutoTesting] AI: resetez contextul.
+[AutoTesting]     - subtip 20/20 pentru structural
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 27.57s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 27.43s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 29.76s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: opresc uneltele AI...
+[AutoTesting] ------------------------------------------------------------
+[AutoTesting] Etapa 2:
+[AutoTesting]     - caut teste noi care imbunatatesc performanta
+[AutoTesting]     - procesez categoria functional
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 44.11s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 37.72s
+[AutoTesting] AI: validez functia propusa si cer o corectie...
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 37.37s
+[AutoTesting] AI: a fost atins numarul maxim de tentative de corectie.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 46.74s
+[AutoTesting] AI: validez functia propusa si cer o corectie...
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 38.22s
+[AutoTesting] AI: a fost atins numarul maxim de tentative de corectie.
+[AutoTesting][WARNING] Categoria functional este oprita deoarece au fost atinse 3 iteratii consecutive fara nicio imbunatatire.
+[AutoTesting]     - procesez categoria structural
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 41.57s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 38.06s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting] AI: API-ul Ollama este activ.
+[AutoTesting] AI: trimit instructiunea catre Ollama...
+[AutoTesting] AI: timp generare raspuns: 39.49s
+[AutoTesting] AI: resetez contextul.
+[AutoTesting][WARNING] Categoria structural este oprita deoarece au fost atinse 3 iteratii consecutive fara nicio imbunatatire.
+[AutoTesting] AI: opresc uneltele AI...
+[AutoTesting] ------------------------------------------------------------
+[AutoTesting] Final:
+[AutoTesting]     - arhivez rezultatele
+[AutoTesting]     - curat fisierele temporare
+[AutoTesting]     - Rezultate finale:
+[AutoTesting] Nu au fost identificate teste noi fata de tipurile deja existente in library-ul framework-ului de testare.
+f@Bijou:~/Desktop/TSS$ 
+

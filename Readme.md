@@ -1,529 +1,432 @@
-# Proiect "Testarea Sistemelor Software"
+# AutoTesting pentru Testarea Sistemelor Software
+
+## 1. Scopul aplicatiei
+
+Aplicatia genereaza automat teste unitare `pytest` pentru functia aflata in `to_test.py`, folosind un model local Ollama. Testele generate sunt validate automat si sunt pastrate numai daca sunt valide si imbunatatesc performanta categoriei curente.
+
+Performanta este calculata separat pentru fiecare categorie de teste:
+
+- `pytest`: verifica daca suita de teste ruleaza corect;
+- `coverage.py`: masoara statement coverage si branch coverage pentru `to_test.py`;
+- `mutmut`: masoara cati mutanti sunt eliminati de teste.
 
-## Cuprins
-* [Tema: imbunatatirea testarii unitare cu IA](#tema-imbunatatirea-testarii-unitare-cu-ia)
-* [Sistem de calcul utilizat](#sistem-de-calcul-utilizat)
-* [Solutia software implementata](#solutia-software-implementata)
-* [Ollama](#ollama)
-* [Git](#git)
-* [Utilitare](#utilitare)
-* [Testarea manuala a suitei curente](#testarea-manuala-a-suitei-curente)
-* [Testarea functionarii framework-ului](#testarea-functionarii-framework-ului)
-* [Structura fisierelor de instructiuni](#structura-fisierelor-de-instructiuni)
-* [Functionalitati](#functionalitati)
-* [Flux de executie](#flux-de-executie)
-* [Utilizare](#utilizare)
-* [Imbunatatiri implementate pentru performanta si calitatea rezultatelor](#imbunatatiri-implementate-pentru-performanta-si-calitatea-rezultatelor)
-* [Autor](#autor)
+Categoriile implicite sunt:
 
-## Tema: imbunatatirea testarii unitare cu IA
+- `functional`: teste generate in `test_functional.py`, pe baza instructiunilor din `testing_functional.md`;
+- `structural`: teste generate in `test_structural.py`, pe baza instructiunilor din `testing_structural.md`.
 
-[<< Cuprins](#cuprins)
+Optimizarea se face separat pe categorie. Daca o categorie ajunge la 100% pytest, 100% coverage si 100% mutanti eliminati, categoria respectiva se opreste independent de cealalta categorie.
 
-    Utilizarea IA pentru imbunatatirea testelor unitare existente,
-    asigurand o acoperire cat mai eficienta a codului sursa, de exemplu
-    prin cresterea branch coverage si a mutation score.
+## 2. Structura proiectului
 
-    Implementarea unui sistem care identifica automat zone relevante de
-    testare unitara, genereaza propuneri de teste, valideaza tehnic aceste
-    propuneri si accepta doar extensiile care imbunatatesc efectiv biblioteca
-    de teste existenta.
+```text
+AutoTesting.py          # orchestratorul principal
+config.py              # configurarea principala, in format Python apropiat de JSON
+reset.py               # resetarea workspace-ului
+manual_testing.py      # rulare manuala pytest / coverage / mutmut in root
+run_examples.py        # pregatirea exemplelor din examples/
+run_arh_manual.py      # rulare manuala pe folderele salvate in arh/
+run_auto.sh            # script shell pentru rularea fluxului automat
+run_manual.sh          # script shell pentru rularea manuala pe arhive
+Rules.md               # reguli generale pentru generarea testelor
+testing_functional.md  # instructiuni numerotate pentru teste functionale
+testing_structural.md  # instructiuni numerotate pentru teste structurale
+to_test.py             # functia curenta testata
+test_functional.py     # teste functionale acceptate
+test_structural.py     # teste structurale acceptate
+test_propunere.py      # fisier temporar pentru candidatul curent
+Includes/              # module interne ale framework-ului
+examples/              # functii de exemplu pentru testarea framework-ului
+arh/                   # arhive ale rularilor finalizate
+logs/                  # loguri tehnice si dialoguri Ollama
+```
 
-    Scopul proiectului este generarea de teste unitare valide pentru
-    comportamentul curent al codului. Testele acceptate trebuie sa treaca la
-    pytest. Sistemul nu are ca obiectiv principal generarea de teste care pica
-    pentru a demonstra buguri de runtime.
+`config.py` din root este fisierul recomandat pentru reglaje uzuale. `Includes/Config.py` este adaptor intern si nu trebuie sters, deoarece modulele din `Includes/` il folosesc pentru incarcarea setarilor.
 
-## Sistem de calcul utilizat
+## 3. Dependinte
 
-[<< Cuprins](#cuprins)
+Instalare utilitare principale:
 
-    Laptop producator:
-        LENOVO IdeaPad Pro 5 14AHP9
-    Processor:
-        AMD Ryzen 7 8845HS Radeon (8 nuclee, frecventa 3.8 - 5.1 GHz)
-    RAM:
-        16GB LPDDR5x
-    SSD:
-        512GB SSD
-    Sistem de operare:
-        Ubuntu 24.04.4 LTS
+```bash
+python3 -m pip install --user --break-system-packages pytest coverage mutmut
+```
 
-## Solutia software implementata
+Instalare Ollama si model local:
 
-[<< Cuprins](#cuprins)
+```bash
+curl -fsSL https://ollama.com/install.sh | sh
+ollama pull qwen2.5-coder:7b
+ollama -v
+```
 
-    Sistem bazat pe AI local, rulat offline:
+Verificari utile:
 
-        Ollama
-        Qwen2.5-Coder 7B
-        AutoTesting.py
+```bash
+python3 -m pytest --version
+python3 -m coverage --version
+mutmut --version
+ollama list
+```
 
-    Tools folosite pentru evaluarea testelor:
+## 4. Configurare
 
-        pytest
-        coverage cu branch coverage
-        mutmut
+Configurarea principala se afla in `config.py`. Fisierul este Python pentru a permite comentarii, dar structura este apropiata de JSON: o singura variabila `CONFIG`, impartita pe sectiuni.
 
-    Componente principale:
+Setari importante:
 
-        AutoTesting.py       - orchestratorul principal
-        Config.py            - configurare centrala
-        PromptBuilder.py     - construirea prompturilor
-        OllamaClient.py      - comunicarea cu API-ul Ollama
-        ResponseParser.py    - parsarea raspunsurilor AI
-        TestValidator.py     - validarea propunerilor de test
-        TestsPerformance.py  - scorare pytest, coverage si mutmut
-        WorkspaceManager.py  - operatii pe fisierele proiectului
-        Archive.py           - arhivarea artefactelor finale
-        Cleanup.py           - curatarea artefactelor temporare
-        Logger.py            - logging tehnic si istoric reguli
-        manual_testing.py    - verificare manuala pytest, coverage si mutmut
+- `timeouts.timeout_sec`: timeout general pentru comenzi obisnuite si pentru apelul HTTP catre Ollama;
+- `timeouts.timeout_sec_mutmut`: timeout separat pentru `mutmut`;
+- `timeouts.timeout_categorie_ai_sec`: buget maxim de timp pentru etapa de descoperire dintr-o categorie;
+- `timeouts.max_corectie_attempts`: cate corectii se cer pentru o propunere invalida;
+- `timeouts.max_empty_answers_consecutive`: cate raspunsuri goale sau inutilizabile consecutive sunt acceptate inainte de renuntare;
+- `generation_limits.max_existing_subtype_attempts_without_progress`: cate incercari consecutive fara progres sunt permise pentru acelasi subtip existent;
+- `generation_limits.max_discovery_attempts_without_progress`: cate incercari consecutive fara progres sunt permise in etapa de descoperire;
+- `generation_limits.max_failed_attempts_kept_per_scope`: cate incercari respinse sunt pastrate ca exemple negative in prompt;
+- `ollama.model`: modelul local folosit pentru generare;
+- `ollama.temperature`: nivelul de variabilitate al raspunsurilor;
+- `terminal.show_ollama_prompt`: afisarea promptului complet in terminal;
+- `terminal.show_ollama_response`: afisarea raspunsului brut in terminal;
+- `terminal.show_ai_technical_messages`: afisarea mesajelor tehnice despre Ollama;
+- `logging.save_ollama_chat`: salvarea dialogului complet in `logs/ollama_chat.log`;
+- `logging.save_ollama_prompts`: salvarea prompturilor complete in `logs/ollama_prompts.log`;
+- `logging.save_ollama_responses`: salvarea raspunsurilor brute in `logs/ollama_responses.log`.
 
-## Ollama
+Configurare recomandata pentru terminal curat:
 
-[<< Cuprins](#cuprins)
+```python
+"terminal": {
+    "show_ollama_prompt": False,
+    "show_ollama_response": False,
+    "show_ai_technical_messages": False,
+}
+```
 
-* **INSTALARE**
+Prompturile si raspunsurile complete raman salvate in `logs/`, fara sa incarce terminalul.
 
-        curl -fsSL https://ollama.com/install.sh | sh
+## 5. Fisierele de reguli
 
-        ollama -v
+### `Rules.md`
 
-        ollama pull qwen2.5-coder:7b
+Contine regulile generale aplicate tuturor prompturilor. Regulile stabilesc formatul raspunsului Ollama, cerinta de a genera o singura functie `test_*`, interdictia importurilor si cerinta de a folosi asertiuni exacte.
 
-        sudo systemctl status ollama
+### `testing_functional.md`
 
-    Ollama ruleaza ca serviciu systemd.
+Contine instructiuni numerotate pentru teste functionale. Testele functionale urmaresc comportamentul vizibil al functiei:
 
-* **CONFIGURARE**
+- valori valide;
+- valori invalide;
+- rezultate returnate;
+- exceptii;
+- valori limita;
+- rezultate speciale;
+- efectul argumentelor de tip flag sau boolean.
 
-    **Optional: marirea contextului modelului**
+Fiecare linie numerotata este un subtip independent. Pentru fiecare subtip se genereaza teste cat timp exista progres. Dupa numarul configurat de incercari consecutive fara progres, se trece la subtipul urmator.
 
-        sudo systemctl edit ollama
+### `testing_structural.md`
 
-            [Service]
-            Environment="OLLAMA_CONTEXT_LENGTH=20000"
+Contine instructiuni numerotate pentru teste structurale. Testele structurale urmaresc caile de executie din cod:
 
-        sudo systemctl daemon-reload
-        sudo systemctl restart ollama
-        sudo systemctl status ollama
+- ramuri `if` si `else`;
+- conditii simple;
+- conditii compuse cu `and` / `or`;
+- bucle cu zero, una sau mai multe iteratii;
+- cai de exceptie;
+- cai normale de returnare;
+- cazuri in care o ramura ulterioara modifica sau nu modifica rezultatul.
 
-    **Permanentizarea PATH pentru utilitarele instalate user-local**
+## 6. Flux automat
 
-        echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
-        source ~/.bashrc
+Rulare principala:
 
-    Framework-ul comunica direct cu API-ul Ollama prin HTTP.
-    Modelul folosit implicit este configurat in `Config.py`.
+```bash
+python3 AutoTesting.py
+```
 
-    Instructiunile transmise catre model sunt formulate in limba engleza,
-    pentru a creste calitatea raspunsurilor generate de modelul local.
+Fluxul executat:
 
-## Git
+1. se curata fisierele temporare;
+2. se verifica existenta conditiilor de rulare;
+3. se citesc categoriile si subtipurile din `testing_*.md`;
+4. pentru fiecare categorie se parcurg subtipurile existente;
+5. pentru fiecare subtip se cer teste de la Ollama pana cand nu mai exista progres;
+6. fiecare candidat este verificat cu `pytest`;
+7. fiecare candidat valid este masurat cu `coverage.py` si `mutmut`;
+8. candidatul este acceptat numai daca pastreaza `pytest` curat si imbunatateste cel putin un scor;
+9. dupa acceptarea unui test, contorul de stagnare al subtipului se reseteaza;
+10. dupa epuizarea subtipurilor existente, se intra in etapa de descoperire de teste noi;
+11. daca un test nou acceptat poate fi sintetizat intr-o regula reutilizabila, regula este adaugata in fisierul `testing_*.md` corespunzator;
+12. la final se afiseaza performanta testelor pe categorii si se arhiveaza rezultatele.
 
-[<< Cuprins](#cuprins)
+## 7. Rulare rapida cu script shell
 
-* **INSTALARE**
+Scripturile shell simplifica comenzile uzuale.
 
-        sudo apt install git
+Activare drepturi de executie:
 
-        git -v
+```bash
+chmod +x run_auto.sh run_manual.sh
+```
 
-        git init
+Rulare automata pe exemplul 1:
 
-        git remote add origin https://github.com/CondruzFilipGabriel/TSS.git
+```bash
+./run_auto.sh
+```
 
-        git remote -v
+Rulare automata pe exemplul 2:
 
-        ssh-keygen -t ed25519 -C "*@*.*"
+```bash
+./run_auto.sh 2
+```
 
-        eval "$(ssh-agent -s)"
+`run_auto.sh` executa:
 
-        ssh-add ~/.ssh/id_ed25519
+```bash
+python3 -m compileall -q AutoTesting.py manual_testing.py reset.py run_examples.py run_arh_manual.py config.py Includes
+python3 run_examples.py <numar_exemplu>
+python3 AutoTesting.py
+```
 
-        cat ~/.ssh/id_ed25519.pub
+## 8. Rulare cu exemple
 
-    Cheia publica se adauga in GitHub cu drepturi de scriere.
+Listarea exemplelor disponibile:
 
-        git add .
+```bash
+python3 run_examples.py list
+```
 
-        git branch -M main
+Pregatirea exemplului 1 fara pornirea framework-ului automat:
 
-        git commit -m "Initial commit"
+```bash
+python3 run_examples.py 1
+```
 
-        git remote set-url origin git@github.com:CondruzFilipGabriel/TSS.git
+Pregatirea exemplului 1 si rularea framework-ului:
 
-        git config --global user.name "*******"
+```bash
+python3 run_examples.py 1 --run-autotesting
+```
 
-        git config --global user.email "*@*.*"
+Rularea tuturor exemplelor:
 
-        git push -u origin main
+```bash
+python3 run_examples.py all --run-autotesting
+```
 
-* **UPDATE / UTILIZARE**
+`run_examples.py` copiaza `examples/<numar>/to_test.py` in root ca `to_test.py`, apoi ruleaza `reset.py` pentru a sterge testele generate anterior.
 
-        git status
+## 9. Resetarea workspace-ului
 
-        git add .
+Resetare manuala:
 
-        git commit -m "Eticheta privind noul update"
+```bash
+python3 reset.py
+```
 
-        git push
+Resetarea recreeaza fisierele de lucru:
 
-## Utilitare
+- `test_functional.py`;
+- `test_structural.py`;
+- `test_propunere.py`.
 
-[<< Cuprins](#cuprins)
+Fiecare dintre aceste fisiere este resetat la scheletul minim:
 
-**pytest, mutmut si coverage**
+```python
+import pytest
+from to_test import *
+```
 
-        python3 -m pip install --user --break-system-packages --upgrade --force-reinstall pytest mutmut coverage
+Resetarea mai sterge sau goleste:
 
-        pytest --version
+- `Logs.jsonl`;
+- `.coverage`;
+- `.pytest_cache/`;
+- `.mutmut-cache/`;
+- `mutants/`;
+- `__pycache__/`;
+- logurile din `logs/`;
+- artefactele temporare de rulare.
 
-        mutmut --version
+Fisierele `testing_functional.md` si `testing_structural.md` nu sunt sterse. Ele contin instructiunile de generare si trebuie pastrate.
 
-        coverage --version
+## 10. Testare manuala in root
 
-**Comenzi utile pentru verificare manuala simpla**
+Rularea tuturor testelor finale din root:
 
-        python3 -m pytest -q
+```bash
+python3 manual_testing.py all
+```
 
-        python3 -m coverage erase
-        python3 -m coverage run --branch -m pytest -q
-        python3 -m coverage report -m --include=to_test.py
+Rularea testelor functionale:
 
-        mutmut run
-        mutmut results
+```bash
+python3 manual_testing.py functional
+```
 
-    Pentru verificare manuala controlata este recomandat scriptul
-    `manual_testing.py`, deoarece selecteaza fisierele de test si configureaza
-    temporar mutmut in acelasi stil ca framework-ul automat.
+Rularea testelor structurale:
 
-## Testarea manuala a suitei curente
+```bash
+python3 manual_testing.py structural
+```
 
-[<< Cuprins](#cuprins)
+Rulare cu stergerea artefactelor dupa finalizare:
 
-    Scriptul `manual_testing.py` ruleaza manual, asupra lui `to_test.py`,
-    urmatoarele verificari:
+```bash
+python3 manual_testing.py all --clean-after
+```
 
-        pytest
-        coverage cu branch coverage
-        mutmut
+`manual_testing.py` ruleaza `pytest`, `coverage.py` cu branch coverage si `mutmut` pe selectia data. `test_propunere.py` este exclus din selectia `all`.
 
-    Scriptul foloseste fisierele `test_*.py` din folderul curent si exclude
-    automat fisierul temporar `test_propunere.py` atunci cand selectia este `all`.
+## 11. Testare manuala pe arhive
 
-    Comenzi:
+Dupa o rulare automata, fisierele finale sunt salvate in `arh/`.
 
-        python3 manual_testing.py
+Listarea arhivelor disponibile:
 
-        python3 manual_testing.py all
+```bash
+python3 run_arh_manual.py --list
+```
 
-        python3 manual_testing.py functional
+Testarea ultimei arhive:
 
-        python3 manual_testing.py structural
+```bash
+python3 run_arh_manual.py latest all
+```
 
-        python3 manual_testing.py functional --clean-after
+Testarea categoriei functionale din ultima arhiva:
 
-    Selectii disponibile:
+```bash
+python3 run_arh_manual.py latest functional
+```
 
-        all
-            Ruleaza toate fisierele finale `test_*.py`,
-            cu excluderea lui `test_propunere.py`.
+Testarea categoriei structurale din ultima arhiva:
 
-        functional
-            Ruleaza `test_functional.py`.
+```bash
+python3 run_arh_manual.py latest structural
+```
 
-        structural
-            Ruleaza `test_structural.py`.
+Rulare prin script shell:
 
-        orice alta categorie
-            Ruleaza `test_<categorie>.py`, daca fisierul exista si contine
-            functii de test.
+```bash
+./run_manual.sh latest all
+./run_manual.sh latest functional
+./run_manual.sh latest structural
+```
 
-    Scriptul curata automat artefactele runtime inainte de rulare:
+Rulare pe arhiva numerotata:
 
-        .mutmut-cache
-        mutants/
-        __manual_testing_pyproject_backup__.tmp
-        .pytest_cache/
-        .coverage
-        __pycache__/
+```bash
+./run_manual.sh 1 all
+./run_manual.sh 2 functional
+./run_manual.sh 3 structural
+```
 
-    Optiunea `--clean-after` executa aceeasi curatare si dupa rulare.
-    Pentru compatibilitate cu o posibila tastare gresita este acceptat si
-    aliasul `--clean-afeter`.
+In interpretarea scriptului, `1` este cea mai veche arhiva disponibila, `2` este urmatoarea s.a.m.d. Valoarea `latest` selecteaza cea mai recenta arhiva.
 
-## Testarea functionarii framework-ului
+## 12. Loguri
 
-[<< Cuprins](#cuprins)
+Logurile sunt pastrate in `logs/`:
 
-        cd /****/TSS
+```text
+logs/framework.log          # log tehnic general
+logs/events.jsonl           # evenimente structurale JSONL
+logs/ollama_chat.log        # prompt + raspuns Ollama
+logs/ollama_prompts.log     # prompturi complete
+logs/ollama_responses.log   # raspunsuri brute Ollama
+```
 
-        python3 AutoTesting.py
+Terminalul este intentionat succint. Detaliile complete ale conversatiei cu Ollama se verifica in loguri.
 
-    La final se verifica:
+Comenzi utile:
 
-        - continutul fisierelor test_*.py
-        - regulile nou adaugate in testing_*.md
-        - istoricul din Logs.jsonl
-        - arhivarea in folderul arh/
-        - logurile tehnice din folderul logs/
+```bash
+tail -n 40 logs/framework.log
+tail -n 40 logs/ollama_responses.log
+tail -n 40 logs/ollama_chat.log
+```
 
-## Structura fisierelor de instructiuni
+## 13. Arhivare
 
-[<< Cuprins](#cuprins)
+La finalul unei rulari automate, aplicatia creeaza un subfolder in `arh/`, de forma:
 
-    Framework-ul foloseste doua niveluri de instructiuni pentru modelul AI.
+```text
+arh/1 12.05.2026 19:24/
+```
 
-    1. `Rules.md`
+In acest folder sunt salvate fisierele finale relevante, de exemplu:
 
-        Contine reguli generale, valabile pentru toate categoriile:
+- `to_test.py`;
+- `test_functional.py`;
+- `test_structural.py`.
 
-            - formatul raspunsului
-            - cerinta de a returna o singura functie pytest
-            - modul de construire a testelor initiale
-            - modul de construire a testelor noi
-            - prioritatile generale
-            - regulile generale pentru formularea `Rule` si `Reasoning`
+Arhivele vechi pot fi sterse daca nu mai sunt necesare pentru comparatie sau raportare:
 
-        `Rules.md` este formulat concis si afirmativ, pentru a reduce
-        ambiguitatea pentru modelul local. Scopul este indicarea formei
-        corecte a raspunsului, nu enumerarea tuturor formelor gresite.
+```bash
+rm -rf arh/*
+```
 
-    2. `testing_*.md`
+Comanda sterge toate arhivele existente si trebuie folosita numai cand rezultatele vechi nu mai sunt necesare.
 
-        Fiecare fisier defineste o categorie de testare.
+## 14. Rezultate finale afisate
 
-        Exemple:
+La finalul rularii se afiseaza un rezumat care include:
 
-            testing_functional.md
-            testing_structural.md
+- numarul de teste acceptate pe categorie;
+- performanta finala pentru `functional`;
+- performanta finala pentru `structural`;
+- scorurile `pytest`, `coverage` si `mutmut`;
+- eventualele reguli noi adaugate in `testing_*.md`.
 
-        Aceste fisiere contin:
+## 15. Recomandari pentru rulare curata
 
-            - sensul categoriei
-            - vocabularul abstract recomandat pentru regulile acelei categorii
-            - sub-categorii sau zone generale de cautare specifice categoriei
-            - regulile numerotate deja acceptate
+Rulare automata recomandata:
 
-        Zonele de cautare sunt surse de idei, nu reguli acceptate.
-        Regulile acceptate sunt liniile numerotate.
+```bash
+./run_auto.sh 1
+```
 
-    Modelul poate folosi valori concrete in testul generat, dar regula
-    abstracta salvata ulterior in `testing_*.md` trebuie sa foloseasca termeni
-    semantici, nu valori concrete, nume de functii, nume de variabile sau
-    siruri concrete de rezultat.
+Echivalent manual:
 
-    Daca un test nou este acceptat, dar modelul nu poate formula o regula
-    valida si reutilizabila, testul ramane in fisierul categoriei. In acest caz
-    regula nu este adaugata in `testing_*.md`, pentru a evita poluarea
-    bibliotecii de reguli cu fallback-uri generice.
+```bash
+python3 -m compileall -q AutoTesting.py manual_testing.py reset.py run_examples.py run_arh_manual.py config.py Includes
+python3 run_examples.py 1
+python3 AutoTesting.py
+```
 
-## Functionalitati
+Verificarea ultimei arhive generate:
 
-[<< Cuprins](#cuprins)
+```bash
+./run_manual.sh latest all
+```
 
-* instructiunile catre AI sunt formulate in limba engleza
+Echivalent manual:
 
-* verifica existenta fisierelor si configuratiilor minime necesare pentru rulare:
-  * `to_test.py`
-  * `Rules.md`
-  * fisierele `testing_*.md`
-  * folderul `arh`
+```bash
+python3 run_arh_manual.py latest all
+```
 
-* creeaza automat fisierele de test corespunzatoare categoriilor definite in `testing_*.md`, sub forma `test_*.py`
+## 16. Recomandari pentru GitHub
 
-* comunica direct cu Ollama prin API HTTP pentru generarea automata de teste Python
+Pentru un repository curat, se recomanda pastrarea codului sursa, a fisierelor de reguli, a exemplelor si a scripturilor de rulare.
 
-* foloseste `Rules.md` pentru regulile generale si `testing_*.md` pentru instructiunile specifice fiecarei categorii
+Se recomanda excluderea artefactelor generate automat:
 
-* foloseste prompturi compacte si afirmative, adaptate pentru un model local de dimensiune redusa
+```text
+__pycache__/
+.pytest_cache/
+.mutmut-cache/
+mutants/
+htmlcov/
+.coverage
+logs/*.log
+logs/*.jsonl
+arh/
+```
 
-* separa promptul general de promptul categoriei, astfel incat conceptele functionale si structurale sa nu fie amestecate
+Daca rezultatele unei rulari trebuie demonstrate, un folder selectat din `arh/` poate fi pastrat separat sau atasat ca artefact, nu neaparat versionat permanent in repository.
 
-* separa fluxul in trei etape logice:
-  * etapa 1: genereaza teste pentru regulile numerotate deja existente in `testing_*.md`
-  * etapa 2: cauta teste noi care imbunatatesc fiecare categorie
-  * etapa 3: formuleaza separat regula generala si motivarea pentru testele noi acceptate
+## 17. Autor
 
-* valideaza fiecare functie de test generata de AI astfel incat:
-  * sa fie o functie `test_*`
-  * sa respecte forma ceruta
-  * sa contina o singura functie de test
-  * sa nu contina cod suplimentar in afara functiei
-  * sa poata fi colectata de `pytest`
-  * sa treaca efectiv la `pytest`
-
-* foloseste un mecanism iterativ de corectare: daca testul generat este invalid, transmite AI-ului eroarea de validare si cere o versiune corectata
-
-* in etapa 1, corectarea ramane legata de regula numerotata ceruta
-
-* in etapa 2, corectarea ramane in aceeasi categorie si in aceeasi zona generala de testare, dar poate ajusta valorile concrete, rezultatul asteptat sau asertiunea
-
-* masoara calitatea testelor prin:
-  * **pytest** pentru validitatea suitei
-  * **coverage** pentru branch coverage asupra `to_test.py`
-  * **mutmut** pentru mutation testing asupra `to_test.py`
-
-* in etapa 2, accepta un test nou doar daca acesta imbunatateste scorurile categoriei curente, evaluate pe testele acceptate ale categoriei impreuna cu testul candidat din `test_propunere.py`
-
-* optimizeaza separat bibliotecile de teste pe categorii, de exemplu:
-  * `test_functional.py` pentru categoria functionala
-  * `test_structural.py` pentru categoria structurala
-
-* in etapa 2, modelul primeste:
-  * codul sursa din `to_test.py`
-  * instructiunile generale din `Rules.md`
-  * instructiunile categoriei curente din `testing_*.md`
-  * regulile numerotate deja existente in categoria curenta
-  * testele deja acceptate ale categoriei
-  * o selectie de incercari respinse anterior
-
-* cautarea testelor noi vizeaza zone insuficient acoperite din categoria curenta, nu doar inceputul sau finalul codului
-
-* memoreaza propunerile respinse si foloseste hash-uri stabile pentru a evita reevaluarea aceleiasi functii deja respinse in etapa 2
-
-* permite pornirea de la zero pentru o categorie care nu are inca teste acceptate
-
-* dupa acceptarea unui test nou, cere separat de la AI:
-  * regula generala asociata testului
-  * motivarea utilitatii testului
-
-* validarea regulii accepta punctuatie simpla in limba engleza:
-  * virgula
-  * punct
-  * punct si virgula
-  * doua puncte
-  * liniuta
-
-* validarea regulii blocheaza formularea goala, formularea generica si termenii concreti evidenti din codul curent
-
-* daca regula valida nu poate fi formulata, testul acceptat ramane in `test_*.py`, dar nu se adauga un bullet nou in `testing_*.md`
-
-* inregistreaza in `Logs.jsonl` regulile noi acceptate, impreuna cu:
-  * categoria
-  * regula
-  * motivarea
-  * imbunatatirea obtinuta
-  * data si autorul
-
-* elimina automat propunerile care nu aduc imbunatatire, pentru a reduce redundanta si zgomotul din biblioteca de teste
-
-* reseteaza contextul AI intre etape, intre categorii si intre solicitari sensibile, precum corectiile sau formularile separate ale regulilor, pentru a evita contaminarea contextului cu informatii irelevante
-
-* evita costurile inutile: daca `pytest` nu este curat, nu mai ruleaza `coverage` si `mutmut` pentru acea evaluare
-
-* curata workspace-ul la inceputul si la finalul rularii automate
-
-* arhiveaza la final fisierul `to_test.py` si fisierele finale `test_*.py` intr-un subfolder numerotat si datat din `arh/`, cu excluderea fisierului temporar `test_propunere.py`
-
-* include un script separat, `manual_testing.py`, pentru verificarea manuala a scorurilor pytest, coverage si mutmut pe toate testele sau pe o categorie selectata
-
-* realizeaza un proces de testare unitara asistata de AI, orientat spre:
-  * generare de teste `pytest`
-  * validare tehnica automata
-  * crestere progresiva a branch coverage
-  * crestere progresiva a mutation score
-  * dezvoltarea unei biblioteci de reguli de testare pe categorii
-
-## Flux de executie
-
-[<< Cuprins](#cuprins)
-
-1. Se curata workspace-ul de fisierele si folderele temporare.
-2. Se verifica structura minima a proiectului.
-3. Se identifica fisierele `testing_*.md` si se creeaza fisierele `test_*.py` lipsa.
-4. Se genereaza testele initiale pentru regulile numerotate existente in `testing_*.md`.
-5. Se marcheaza finalul testelor initiale in fisierele de test.
-6. Se cauta teste noi pentru fiecare categorie.
-7. Pentru fiecare test candidat se ruleaza validarea tehnica.
-8. Pentru fiecare test valid se evalueaza scorurile pe categoria curenta plus `test_propunere.py`.
-9. Daca scorurile se imbunatatesc fara regresie, testul este acceptat in fisierul categoriei.
-10. Pentru fiecare test nou acceptat, se cere separat regula si motivarea.
-11. Daca regula este valida si negenerica, aceasta este salvata in `Logs.jsonl` si adaugata in `testing_*.md`.
-12. Daca regula nu poate fi formulata valid, testul ramane acceptat, dar nu se adauga regula in `testing_*.md`.
-13. Se arhiveaza rezultatele finale.
-14. Se curata fisierele si folderele temporare.
-15. Se afiseaza regulile noi adaugate in sesiunea curenta.
-
-## Utilizare
-
-[<< Cuprins](#cuprins)
-
-* **Pornire framework automat, in folderul proiectului**
-
-        python3 AutoTesting.py
-
-* **Verificare manuala globala**
-
-        python3 manual_testing.py
-
-* **Verificare manuala pe categoria functionala**
-
-        python3 manual_testing.py functional
-
-* **Verificare manuala pe categoria structurala**
-
-        python3 manual_testing.py structural
-
-* **Verificare manuala cu stergerea artefactelor dupa rulare**
-
-        python3 manual_testing.py all --clean-after
-
-* La finalul rularii automate sunt afisate regulile noi adaugate in sesiunea curenta.
-
-* In fisierul `Logs.jsonl` se regasesc regulile acceptate de-a lungul rularilor.
-
-* In fisierele `testing_*.md` se construieste treptat biblioteca de reguli de testare pe categorii.
-
-* In folderul `arh/` se salveaza, intr-un subfolder numerotat si datat, fisierul `to_test.py` si fisierele finale `test_*.py`.
-
-* In folderul `logs/` se salveaza logurile tehnice ale framework-ului si interactiunile brute cu Ollama, daca debugging-ul este activ.
-
-## Imbunatatiri implementate pentru performanta si calitatea rezultatelor
-
-[<< Cuprins](#cuprins)
-
-* a fost separata arhitectura pe module specializate pentru orchestrare, prompturi, validare, scoring, logging, arhivare si lucru cu fisierele
-* a fost separat clar fluxul in etapa unu, etapa doi si etapa trei, fiecare cu scop propriu
-* in etapa unu se genereaza teste pentru regulile explicite deja existente in fisierele categoriei
-* in etapa doi se cauta doar teste noi care aduc o imbunatatire reala categoriei curente
-* in etapa trei se cere separat formularea regulii generale si a motivarii pentru testele deja acceptate
-* instructiunile generale au fost mutate in `Rules.md`, iar instructiunile specifice categoriilor au fost pastrate in fisierele `testing_*.md`
-* `Rules.md` a fost redus la reguli generale concise si afirmative, pentru a evita supraincarcarea modelului local
-* fisierele `testing_functional.md` si `testing_structural.md` contin sensul categoriei, vocabularul abstract si zonele de cautare specifice categoriei
-* zonele de cautare din fisierele categoriei sunt folosite ca surse de idei, nu ca reguli deja acceptate
-* modelul este incurajat sa caute zone insuficient acoperite in categoria curenta, fara a favoriza artificial inceputul sau finalul codului
-* testul concret poate folosi valori concrete din cod, dar regula abstracta salvata ulterior trebuie sa foloseasca termeni semantici
-* prioritatile pentru testele noi au fost clarificate: corectitudine, zona insuficient testata, regula noua, imbunatatirea scorului si simplitate
-* corectarea propunerilor invalide este formulata afirmativ si orientata spre obtinerea unui test pytest valid
-* in etapa doi, corectarea poate ajusta ideea concreta in aceeasi zona generala de testare, pentru a evita blocarea pe o propunere slaba
-* validarea regulilor a fost relaxata pentru a permite punctuatia naturala simpla
-* filtrarea termenilor concreti din reguli a fost facuta mai permisiva, pentru a reduce respingerea regulilor utile
-* fallback-urile generice de tip regula noua distincta nu mai sunt salvate ca reguli reale in `testing_*.md`
-* contextul AI este resetat in punctele sensibile ale fluxului pentru a reduce contaminarea dintre solicitari diferite
-* sunt folosite mesaje de validare mai utile si mai compacte, pentru a ajuta modelul sa corecteze mai bine raspunsurile invalide
-* fiecare test generat este validat strict, astfel incat sa fie acceptate doar teste care trec efectiv prin `pytest`
-* fiecare categorie este optimizata independent, astfel incat functionalul si structuralul sa evolueze separat
-* un test nou este evaluat impreuna cu biblioteca deja acceptata a categoriei sale, nu izolat
-* a fost introdus un mecanism de evitare a erorilor pentru categoriile care nu au inca teste acceptate
-* este evitata reevaluarea aceleiasi propuneri deja respinse prin memorarea ei si folosirea unui hash stabil
-* modelului ii sunt aratate incercarile respinse anterior, pentru a reduce repetitiile si a forta cautarea de idei noi
-* modelului ii sunt aratate si regulile numerotate deja existente din categorie, pentru a evita dublurile semantice
-* in etapa doi sunt acceptate doar propunerile care imbunatatesc categoria fara sa strice scorurile deja obtinute
-* cautarea pe o categorie este oprita dupa un numar de iteratii consecutive fara imbunatatire, pentru a limita consumul inutil
-* `coverage` si `mutmut` nu mai sunt rulate atunci cand `pytest` nu produce un rezultat curat, reducand costul evaluarilor inutile
-* cererea de test este separata de cererea de regula, pentru a nu amesteca generarea codului cu abstractizarea regulii
-* fisierul temporar `test_propunere.py` este exclus din arhivare, astfel incat arhiva sa contina doar artefactele finale relevante
-* logarea tehnica a fost imbunatatita, astfel incat motivele de respingere si evolutia scorurilor sa poata fi urmarite mai usor
-* a fost adaugat `manual_testing.py` pentru rularea manuala a pytest, coverage si mutmut pe toate testele sau pe o categorie selectata
-* `manual_testing.py` curata automat artefactele runtime inainte de rulare si poate curata optional si dupa rulare cu `--clean-after`
-
-## Autor
-
-[<< Cuprins](#cuprins)
-
-    Condruz Filip Gabriel
-
-    Univesitatea Bucuresti, Facultatea de Matematica si Informatica, anul 3 ID
+Condruz Filip Gabriel  
+Universitatea din Bucuresti, Facultatea de Matematica si Informatica, anul 3 ID
