@@ -20,7 +20,7 @@ Optimizarea se face separat pe categorie. Daca o categorie ajunge la 100% pytest
 ## 2. Structura proiectului
 
 ```text
-AutoTesting.py          # orchestratorul principal
+AutoTesting.py         # orchestratorul principal
 config.py              # configurarea principala, in format Python apropiat de JSON
 reset.py               # resetarea workspace-ului
 manual_testing.py      # rulare manuala pytest / coverage / mutmut in root
