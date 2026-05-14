@@ -2,8 +2,10 @@
 
 Task: write exactly one pytest test for the requested instruction.
 
-The requested instruction is the only testing goal for this answer.
-Read the source code, choose concrete input values and write an exact assertion.
+The requested instruction is the only goal for this answer.
+Treat it as a command, not as a topic.
+Read the source code, choose concrete input values and write the exact expected result.
+If a loop affects the result, trace the loop before writing the assertion.
 
 Output format:
 - Return only one Python function.
@@ -14,23 +16,26 @@ Output format:
 - Use the function from `to_test.py` directly.
 - Use `assert` for returned values.
 - Use `pytest.raises` for expected exceptions.
-- Assert the exact visible behavior.
+- Assert exact visible behavior.
 
 Behavior:
-- Follow the requested instruction exactly.
+- Follow only the requested instruction.
 - Use one concrete case.
 - Use a new function name.
-- Avoid repeating accepted tests.
-- Avoid repeating rejected tests.
-- Prefer simple inputs whose expected result is clear from the source code.
+- Do not repeat accepted tests.
+- Do not repeat rejected tests.
+- Prefer simple inputs with a clear expected result.
 
 # New test discovery stage
 
 Task: write exactly one new pytest test for the current category.
 
-Use the category instruction as the main goal.
-The new test must be different from the listed explicit subtypes and from already accepted or rejected tests.
-Read the source code and choose a concrete behavior or execution path that is not already tested.
+Use the category instruction as a requirement.
+The new test must belong to the current category.
+The new test must be different from the listed subtypes and from accepted or rejected tests.
+Read the source code and choose one concrete behavior or execution path that is not already tested.
+For functional tests, focus on visible behavior: returned values, exceptions, boundaries, flags and output classes.
+For structural tests, focus on execution paths: branches, compound conditions, loops, guards, assignments, missing lines and return paths.
 
 Output format:
 - Return only one Python function.

@@ -12,6 +12,18 @@ PYTHON = "python3"
 FILE_UNDER_TEST = "to_test.py"
 PROPOSAL_FILE = "test_propunere.py"
 
+TEMP_DIR_NAMES = {
+    "__pycache__",
+    ".pytest_cache",
+    "htmlcov",
+    "mutants",
+    ".mutmut-cache",
+}
+TEMP_FILE_PATTERNS = (
+    ".coverage",
+    ".coverage.*",
+)
+
 
 def archive_number(path: Path) -> int:
     try:
@@ -80,37 +92,45 @@ def select_tests(folder: Path, selection: str) -> list[str]:
     return [file_name]
 
 
-def clean_runtime(folder: Path) -> None:
-    """Sterge artefactele temporare create prin pytest, coverage si mutmut.
+def safe_remove_path(path: Path) -> None:
+    if path.is_dir():
+        shutil.rmtree(path, ignore_errors=True)
+    elif path.exists():
+        path.unlink()
 
-    Folderul arhivei ramane intact. Sunt sterse doar fisiere/foldere
-    generate automat in timpul rularilor manuale.
+
+def clean_runtime(folder: Path) -> int:
     """
-    root_artifacts = ["mutants", ".mutmut-cache", ".pytest_cache", "htmlcov"]
-    root_files = [".coverage"]
+    Sterge artefactele temporare create de pytest, coverage si mutmut.
 
-    for name in root_artifacts:
-        path = folder / name
-        if path.is_dir():
-            shutil.rmtree(path)
-        elif path.exists():
-            path.unlink()
+    Nu sterge arhiva si nu modifica fisierele sursa sau fisierele de teste:
+    - to_test.py
+    - test_functional.py
+    - test_structural.py
+    """
+    removed = 0
 
-    for name in root_files:
-        path = folder / name
-        if path.exists():
-            path.unlink()
+    # Sterge directoarele temporare oriunde apar in arhiva.
+    # Lista este materializata inainte de stergere ca sa evitam modificarea
+    # iteratorului in timp ce se parcurge arborele de fisiere.
+    temp_dirs = [
+        path
+        for path in folder.rglob("*")
+        if path.is_dir() and path.name in TEMP_DIR_NAMES
+    ]
 
-    # __pycache__ poate aparea in radacina arhivei sau in subfoldere
-    # create temporar de instrumentele de testare.
-    for cache_dir in folder.rglob("__pycache__"):
-        if cache_dir.is_dir():
-            shutil.rmtree(cache_dir)
+    # Sterge mai intai directoarele cele mai adanci.
+    for path in sorted(temp_dirs, key=lambda p: len(p.parts), reverse=True):
+        safe_remove_path(path)
+        removed += 1
 
-    # Coverage poate crea fisiere .coverage.* in anumite contexte.
-    for coverage_file in folder.glob(".coverage.*"):
-        if coverage_file.is_file():
-            coverage_file.unlink()
+    for pattern in TEMP_FILE_PATTERNS:
+        for path in folder.rglob(pattern):
+            if path.is_file():
+                safe_remove_path(path)
+                removed += 1
+
+    return removed
 
 
 def run_command(folder: Path, command: list[str], timeout: int = 600) -> subprocess.CompletedProcess[str]:
@@ -134,7 +154,7 @@ def write_mutmut_config(folder: Path, test_files: list[str]) -> tuple[bool, str]
         f'paths_to_mutate = ["{FILE_UNDER_TEST}"]\n'
         f"pytest_add_cli_args_test_selection = [{quoted}]\n"
         'pytest_add_cli_args = ["-q"]\n'
-        "debug = false\n",
+        "debug = true\n",
         encoding="utf-8",
     )
     return had_file, previous_content
@@ -177,6 +197,17 @@ def print_output(title: str, output: str, max_lines: int = 60) -> None:
         print(f"... output trunchiat: inca {len(lines) - max_lines} linii")
 
 
+def print_mutmut_summary(mutmut_run: subprocess.CompletedProcess[str], mutmut_results: subprocess.CompletedProcess[str]) -> None:
+    print("\nMutmut")
+    print("------")
+    if mutmut_run.returncode == 0 and mutmut_results.returncode == 0:
+        print("rulare finalizata")
+        return
+
+    print("rulare terminata cu erori; fragment de output:")
+    print_output("Mutmut output", mutmut_run.stdout + "\n" + mutmut_results.stdout, max_lines=25)
+
+
 def run_manual(folder: Path, selection: str, clean_after: bool) -> None:
     if not (folder / FILE_UNDER_TEST).exists():
         raise FileNotFoundError(f"Lipseste {FILE_UNDER_TEST} in {folder}")
@@ -202,39 +233,30 @@ def run_manual(folder: Path, selection: str, clean_after: bool) -> None:
     print_output("Coverage", coverage_result.stdout + "\n" + coverage_report.stdout)
 
     had_pyproject, previous_content = write_mutmut_config(folder, test_files)
-    mutmut_run = None
-    mutmut_results = None
     try:
         mutmut_run = run_command(folder, ["mutmut", "run"], timeout=600)
         mutmut_results = run_command(folder, ["mutmut", "results"], timeout=180)
-    except FileNotFoundError:
-        print("\nMutmut")
-        print("------")
-        print("executabilul mutmut nu a fost gasit")
-        total, killed, unresolved, score = 0, 0, 0, 0.0
     finally:
         restore_mutmut_config(folder, had_pyproject, previous_content)
 
-    if mutmut_run is not None and mutmut_results is not None:
-        total, killed, unresolved, score = parse_mutmut_score(mutmut_run.stdout, mutmut_results.stdout)
-        if mutmut_run.returncode != 0:
-            print_output("Mutmut", mutmut_run.stdout + "\n" + mutmut_results.stdout, max_lines=25)
-        else:
-            print("\nMutmut")
-            print("------")
-            print("rulare finalizata")
+    total, killed, unresolved, score = parse_mutmut_score(mutmut_run.stdout, mutmut_results.stdout)
+    print_mutmut_summary(mutmut_run, mutmut_results)
 
     print("\nRezumat")
     print("-------")
     print(f"Pytest return code: {pytest_result.returncode}")
     print(f"Coverage return code: {coverage_result.returncode}")
+    print(f"Mutmut return code: {mutmut_run.returncode}")
     print(f"Mutanti total: {total}")
     print(f"Mutanti omorati: {killed}")
     print(f"Mutanti nerezolvati: {unresolved}")
     print(f"Mutation score: {score}%")
 
     if clean_after:
-        clean_runtime(folder)
+        removed = clean_runtime(folder)
+        print(f"Cleanup temporar: efectuat ({removed} elemente sterse)")
+    else:
+        print("Cleanup temporar: sarit la cerere")
 
 
 def main() -> None:
@@ -242,11 +264,7 @@ def main() -> None:
     parser.add_argument("archive", nargs="?", default="latest", help="latest, numar arhiva sau nume folder din arh/.")
     parser.add_argument("selection", nargs="?", default="all", help="all, functional, structural sau nume fisier test_*.py.")
     parser.add_argument("--list", action="store_true", help="Afiseaza arhivele disponibile si iese.")
-    parser.add_argument(
-        "--no-clean-after",
-        action="store_true",
-        help="Pastreaza artefactele temporare dupa testare, pentru depanare.",
-    )
+    parser.add_argument("--no-clean-after", action="store_true", help="Pastreaza artefactele temporare dupa testare pentru depanare.")
     args = parser.parse_args()
 
     if args.list:
@@ -258,8 +276,12 @@ def main() -> None:
             print(f"{archive_number(folder)}: {folder.name}")
         return
 
-    folder = find_archive(args.archive)
-    run_manual(folder, args.selection, clean_after=not args.no_clean_after)
+    try:
+        folder = find_archive(args.archive)
+        run_manual(folder, args.selection, clean_after=not args.no_clean_after)
+    except (FileNotFoundError, ValueError) as error:
+        print(error)
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":
