@@ -41,8 +41,6 @@ arh/                   # arhive ale rularilor finalizate
 logs/                  # loguri tehnice si dialoguri Ollama
 ```
 
-`config.py` din root este fisierul recomandat pentru reglaje uzuale. `Includes/Config.py` este adaptor intern si nu trebuie sters, deoarece modulele din `Includes/` il folosesc pentru incarcarea setarilor.
-
 ## 3. Dependinte
 
 Instalare utilitare principale:
@@ -70,7 +68,7 @@ ollama list
 
 ## 4. Configurare
 
-Configurarea principala se afla in `config.py`. Fisierul este Python pentru a permite comentarii, dar structura este apropiata de JSON: o singura variabila `CONFIG`, impartita pe sectiuni.
+Configurarea principala se afla in `config.py`. 
 
 Setari importante:
 
@@ -405,26 +403,6 @@ Echivalent manual:
 ```bash
 python3 run_arh_manual.py latest all
 ```
-
-## 16. Recomandari pentru GitHub
-
-Pentru un repository curat, se recomanda pastrarea codului sursa, a fisierelor de reguli, a exemplelor si a scripturilor de rulare.
-
-Se recomanda excluderea artefactelor generate automat:
-
-```text
-__pycache__/
-.pytest_cache/
-.mutmut-cache/
-mutants/
-htmlcov/
-.coverage
-logs/*.log
-logs/*.jsonl
-arh/
-```
-
-Daca rezultatele unei rulari trebuie demonstrate, un folder selectat din `arh/` poate fi pastrat separat sau atasat ca artefact, nu neaparat versionat permanent in repository.
 
 ## 17. Autor
 
