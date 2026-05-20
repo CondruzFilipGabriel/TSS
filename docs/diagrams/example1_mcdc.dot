@@ -1,0 +1,26 @@
+digraph example1_mcdc {
+  graph [rankdir=TB, bgcolor="#FFFFFF", fontname="DejaVu Sans", fontcolor="#263238", label="Conditii compuse si perechi MC/DC", labelloc=t, fontsize=18, margin=0.25, pad=0.2, color="#D5DBE5"];
+  node [shape=plain, fontname="DejaVu Sans", fontcolor="#263238"];
+
+  d1 [label=<
+  <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="8" COLOR="#64748B">
+    <TR><TD BGCOLOR="#FFEDD5" COLOR="#64748B" COLSPAN="4"><B>D1: weight_kg &lt; 0 OR distance_km &lt; 0</B></TD></TR>
+    <TR><TD BGCOLOR="#DBEAFE" COLOR="#64748B"><B>Test</B></TD><TD BGCOLOR="#DBEAFE" COLOR="#64748B"><B>weight_kg &lt; 0</B></TD><TD BGCOLOR="#DBEAFE" COLOR="#64748B"><B>distance_km &lt; 0</B></TD><TD BGCOLOR="#DBEAFE" COLOR="#64748B"><B>Decizie</B></TD></TR>
+    <TR><TD BGCOLOR="#EFF6FF" COLOR="#64748B">T1</TD><TD BGCOLOR="#DCFCE7" COLOR="#64748B">True</TD><TD BGCOLOR="#FEE2E2" COLOR="#64748B">False</TD><TD BGCOLOR="#DCFCE7" COLOR="#64748B">True</TD></TR>
+    <TR><TD BGCOLOR="#EFF6FF" COLOR="#64748B">T2</TD><TD BGCOLOR="#FEE2E2" COLOR="#64748B">False</TD><TD BGCOLOR="#DCFCE7" COLOR="#64748B">True</TD><TD BGCOLOR="#DCFCE7" COLOR="#64748B">True</TD></TR>
+    <TR><TD BGCOLOR="#EFF6FF" COLOR="#64748B">T3</TD><TD BGCOLOR="#FEE2E2" COLOR="#64748B">False</TD><TD BGCOLOR="#FEE2E2" COLOR="#64748B">False</TD><TD BGCOLOR="#FEE2E2" COLOR="#64748B">False</TD></TR>
+  </TABLE>
+  >];
+
+  d2 [label=<
+  <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="8" COLOR="#64748B">
+    <TR><TD BGCOLOR="#FCE7F3" COLOR="#64748B" COLSPAN="4"><B>D2: fragile AND distance_km &gt; 100</B></TD></TR>
+    <TR><TD BGCOLOR="#DBEAFE" COLOR="#64748B"><B>Test</B></TD><TD BGCOLOR="#DBEAFE" COLOR="#64748B"><B>fragile</B></TD><TD BGCOLOR="#DBEAFE" COLOR="#64748B"><B>distance_km &gt; 100</B></TD><TD BGCOLOR="#DBEAFE" COLOR="#64748B"><B>Decizie</B></TD></TR>
+    <TR><TD BGCOLOR="#EFF6FF" COLOR="#64748B">T1</TD><TD BGCOLOR="#DCFCE7" COLOR="#64748B">True</TD><TD BGCOLOR="#DCFCE7" COLOR="#64748B">True</TD><TD BGCOLOR="#DCFCE7" COLOR="#64748B">True</TD></TR>
+    <TR><TD BGCOLOR="#EFF6FF" COLOR="#64748B">T2</TD><TD BGCOLOR="#FEE2E2" COLOR="#64748B">False</TD><TD BGCOLOR="#DCFCE7" COLOR="#64748B">True</TD><TD BGCOLOR="#FEE2E2" COLOR="#64748B">False</TD></TR>
+    <TR><TD BGCOLOR="#EFF6FF" COLOR="#64748B">T3</TD><TD BGCOLOR="#DCFCE7" COLOR="#64748B">True</TD><TD BGCOLOR="#FEE2E2" COLOR="#64748B">False</TD><TD BGCOLOR="#FEE2E2" COLOR="#64748B">False</TD></TR>
+  </TABLE>
+  >];
+
+  d1 -> d2 [style=invis];
+}

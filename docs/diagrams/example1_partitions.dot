@@ -1,0 +1,14 @@
+digraph example1_partitions {
+  graph [rankdir=TB, bgcolor="#FFFFFF", fontname="DejaVu Sans", fontcolor="#263238", label="Partitii functionale si valori de frontiera", labelloc=t, fontsize=18, margin=0.25, pad=0.2, color="#D5DBE5"];
+  node [shape=plain, fontname="DejaVu Sans", fontcolor="#263238"];
+
+  table [label=<
+  <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="8" COLOR="#64748B">
+    <TR><TD BGCOLOR="#DBEAFE" COLOR="#64748B"><B>Parametru</B></TD><TD BGCOLOR="#DBEAFE" COLOR="#64748B"><B>Clase / alternative</B></TD><TD BGCOLOR="#DBEAFE" COLOR="#64748B"><B>Valori relevante</B></TD><TD BGCOLOR="#DBEAFE" COLOR="#64748B"><B>Efect observabil</B></TD></TR>
+    <TR><TD BGCOLOR="#EFF6FF" COLOR="#64748B">weight_kg</TD><TD BGCOLOR="#F0FDF4" COLOR="#64748B">negativ / 0..5 / &gt;5</TD><TD BGCOLOR="#FEF3C7" COLOR="#64748B">-1, 0, 5, 6</TD><TD BGCOLOR="#FEE2E2" COLOR="#64748B">ValueError / light / heavy</TD></TR>
+    <TR><TD BGCOLOR="#EFF6FF" COLOR="#64748B">distance_km</TD><TD BGCOLOR="#F0FDF4" COLOR="#64748B">negativ / 0 / 1..100 / 101..150 / &gt;150</TD><TD BGCOLOR="#FEF3C7" COLOR="#64748B">-1, 0, 100, 101, 150, 151</TD><TD BGCOLOR="#FCE7F3" COLOR="#64748B">ValueError / normal / special / long_route</TD></TR>
+    <TR><TD BGCOLOR="#EFF6FF" COLOR="#64748B">fragile</TD><TD BGCOLOR="#F0FDF4" COLOR="#64748B">False / True</TD><TD BGCOLOR="#FEF3C7" COLOR="#64748B">False, True</TD><TD BGCOLOR="#E0F2FE" COLOR="#64748B">activeaza special_handling doar cu distance_km &gt; 100</TD></TR>
+    <TR><TD BGCOLOR="#EFF6FF" COLOR="#64748B">Rezultat</TD><TD BGCOLOR="#F0FDF4" COLOR="#64748B">light / heavy / special_handling / *_long_route</TD><TD BGCOLOR="#FEF3C7" COLOR="#64748B">combinatii valide</TD><TD BGCOLOR="#DCFCE7" COLOR="#64748B">sirul returnat de functie</TD></TR>
+  </TABLE>
+  >];
+}

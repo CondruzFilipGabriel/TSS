@@ -1,0 +1,36 @@
+# Python bytecode / caches
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Test / coverage artifacts
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Mutation testing artifacts
+.mutmut-cache/
+mutants/
+
+# Project runtime logs and generated reports
+logs/
+Logs.jsonl
+terminal_log.txt
+
+# Generated local archives / run snapshots
+arh/
+
+# Local system-configuration files used only for README preparation
+configuratie_sistem.md
+colectare_configuratie.sh
+
+# Local safety backup created by run_examples.py / example_runner
+# This file may be useful locally, but it is generated and should not be versioned.
+to_test.backup_before_example_runner.py
+
+# Local editor / OS noise
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
